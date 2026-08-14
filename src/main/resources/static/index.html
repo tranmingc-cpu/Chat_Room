@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Chat Web</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="chat-container">
+    <h2>Chat Ngẫu Nhiên</h2>
+
+    <div id="status" class="status-box">Đang kết nối...</div>
+
+    <div id="partner-card" style="display: flex; align-items: center; gap: 12px; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px;">
+        <img id="partner-avatar" src="https://via.placeholder.com/150" alt="Avatar" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" />
+        <div>
+            <h4 id="partner-name" style="margin: 0; font-size: 16px;">Chưa ghép đôi</h4>
+            <p style="margin: 4px 0 0 0; color: #6c757d; font-size: 14px;">
+                <span id="partner-age">--</span> • <span id="partner-location">--</span>
+            </p>
+        </div>
+    </div>
+
+    <div id="guest-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>👋 Nhập thông tin để tìm bạn</h3>
+            <input type="text" id="guest-name" placeholder="Nhập biệt danh của bạn" />
+
+            <input type="number" id="guest-age" placeholder="Nhập tuổi của bạn" min="10" max="100" />
+
+            <select id="guest-gender">
+                <option value="nam">Nam</option>
+                <option value="nu">Nữ</option>
+                <option value="khac">Khác</option>
+            </select>
+
+            <select id="guest-location">
+                <option value="">-- Chọn Tỉnh/Thành --</option>
+            </select>
+
+            <input type="text" id="guest-avatar" placeholder="Link ảnh Avatar (không bắt buộc)" />
+
+            <button class="btn-accept" style="width:100%; padding:10px; margin-top:10px;" onclick="saveGuestProfile()">Bắt đầu Chat ngay</button>
+        </div>
+    </div>
+
+    <div id="chat-box" class="chat-box"></div>
+
+    <div class="controls">
+        <button id="btn-match" onclick="findMatch()">🔍 Tìm bạn</button>
+        <button id="btn-exit" onclick="exitAndFindNew()" disabled>🚪 Thoát & Tìm mới</button>
+    </div>
+
+    <div class="input-group">
+        <input type="file" id="file-input" accept="image/*,video/*" style="display: none;" onchange="uploadAndSendFile(event)">
+        <button id="btn-file" onclick="document.getElementById('file-input').click()" disabled>📎</button>
+        <input type="text" id="msg-input" placeholder="Nhập tin nhắn..." disabled onkeypress="handleKeyPress(event)">
+        <button id="btn-send" onclick="sendMessage()" disabled>Gửi</button>
+    </div>
+</div>
+
+<div id="match-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3>🎉 Đã tìm thấy bạn chat!</h3>
+        <p>Bạn có muốn bắt đầu trò chuyện với người này không?</p>
+        <div class="modal-actions">
+            <button class="btn-accept" onclick="acceptMatch()">Đồng ý</button>
+            <button class="btn-reject" onclick="rejectMatch()">Từ chối</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
