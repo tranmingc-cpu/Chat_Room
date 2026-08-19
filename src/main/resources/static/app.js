@@ -1,9 +1,15 @@
 let socket = null;
 let isMatched = false;
+let currentUserId = localStorage.getItem('chatUserId');
+if (!currentUserId) {
+    currentUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('chatUserId', currentUserId);
+}
 
 // 1. Lấy thông tin người dùng từ Form HTML (gồm Avatar, Tên, Tuổi, Thành phố)
 function getUserInfo() {
     return {
+        id: currentUserId,
         avatar: document.getElementById("guest-avatar")?.value || "https://via.placeholder.com/150",
         name: document.getElementById("guest-name")?.value.trim() || "Người lạ",
         age: document.getElementById("guest-age")?.value || "N/A",
@@ -213,12 +219,14 @@ function toggleChatInput(enable) {
     const btnMatch = document.getElementById("btn-match");
     const msgInput = document.getElementById("msg-input");
     const btnFile = document.getElementById("btn-file");
+    const menuExit = document.getElementById("menu-exit-room");
 
     if (btnExit) btnExit.disabled = !enable;
     if (btnSend) btnSend.disabled = !enable;
     if (btnMatch) btnMatch.disabled = enable;
     if (msgInput) msgInput.disabled = !enable;
     if (btnFile) btnFile.disabled = !enable;
+    if (menuExit) menuExit.style.display = enable ? "flex" : "none";
 }
 
 function showModal(show) {
@@ -329,6 +337,16 @@ function loadProvinces() {
 
 // 9. Khởi chạy khi trang web sẵn sàng
 document.addEventListener("DOMContentLoaded", function () {
+    const userIdEl = document.getElementById('user-id');
+    if (userIdEl) userIdEl.innerText = currentUserId;
+
     loadProvinces();
     connectWebSocket();
 });
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar-menu');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar) sidebar.classList.toggle('active');
+    if (overlay) overlay.classList.toggle('active');
+}
