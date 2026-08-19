@@ -8,7 +8,30 @@
 </head>
 <body>
 <div class="chat-container">
-    <h2>Chat Ngẫu Nhiên</h2>
+    <div class="header-bar" style="display: flex; justify-content: space-between; align-items: center; background-color: #007bff; padding: 15px; color: white;">
+        <h2 style="margin: 0; padding: 0; background: none; font-size: 1.25rem;">Chat Ngẫu Nhiên</h2>
+        <button onclick="toggleSidebar()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">☰</button>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <div id="sidebar-overlay" class="sidebar-overlay hidden" onclick="toggleSidebar()"></div>
+    <div id="sidebar-menu" class="sidebar">
+        <div class="sidebar-item">
+            <span class="icon">👤</span> <span>ID: <span id="user-id">---</span></span>
+        </div>
+        <div class="sidebar-item" onclick="openProfileModal(); toggleSidebar();">
+            <span class="icon">⚙️</span> <span>Cài đặt</span>
+        </div>
+        <div class="sidebar-item" onclick="openProfileModal(); toggleSidebar();">
+            <span class="icon">ℹ️</span> <span>Thông tin</span>
+        </div>
+        <div class="sidebar-item" onclick="alert('Tính năng đang phát triển'); toggleSidebar();">
+            <span class="icon">⚠️</span> <span>Báo Xấu</span>
+        </div>
+        <div class="sidebar-item" onclick="exitAndFindNew(); toggleSidebar();">
+            <span class="icon">🚪</span> <span>Thoát trò chuyện</span>
+        </div>
+    </div>
 
     <div id="status" class="status-box">Đang kết nối...</div>
 
@@ -27,7 +50,7 @@
             <h3>👋 Nhập thông tin để tìm bạn</h3>
             <input type="text" id="guest-name" placeholder="Nhập biệt danh của bạn" />
 
-            <input type="number" id="guest-age" placeholder="Nhập tuổi của bạn" min="10" max="100" />
+            <input type="text" id="guest-age" inputmode="numeric" pattern="[0-9]*" placeholder="Nhập tuổi của bạn" />
 
             <select id="guest-gender">
                 <option value="nam">Nam</option>

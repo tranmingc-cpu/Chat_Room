@@ -285,10 +285,26 @@ async function uploadAvatarPreview(event) {
     }
 }
 
+// Mở modal hồ sơ
+function openProfileModal() {
+    const modal = document.getElementById("guest-modal");
+    if (modal) {
+        modal.classList.remove("hidden");
+        const title = modal.querySelector("h3");
+        if (title) title.innerText = "Hồ sơ của bạn";
+        const btn = modal.querySelector(".btn-accept");
+        if (btn) btn.innerText = "Lưu thông tin";
+    }
+}
+
 // Lưu profile và đóng modal
 function saveGuestProfile() {
     const modal = document.getElementById("guest-modal");
-    if (modal) modal.classList.add("hidden");
+    if (modal) {
+        modal.classList.add("hidden");
+        // Nếu người dùng đang trong phiên chat và cập nhật thông tin, 
+        // có thể gửi thông tin mới lên server hoặc chỉ lưu local cho phiên ghép đôi tiếp theo.
+    }
 }
 
 // 8. Tải danh sách tỉnh thành từ API
