@@ -38,9 +38,11 @@
             <select id="guest-location">
                 <option value="">-- Chọn Tỉnh/Thành --</option>
             </select>
-
-            <input type="text" id="guest-avatar" placeholder="Link ảnh Avatar (không bắt buộc)" />
-
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="guest-avatar" placeholder="Link ảnh Avatar (không bắt buộc)" style="flex: 1;" />
+                <input type="file" id="guest-avatar-file" accept="image/*" style="display: none;" onchange="uploadAvatarPreview(event)">
+                <button type="button" class="btn-reject" style="width: auto; padding: 10px;" onclick="document.getElementById('guest-avatar-file').click()">Tải ảnh</button>
+            </div>
             <button class="btn-accept" style="width:100%; padding:10px; margin-top:10px;" onclick="saveGuestProfile()">Bắt đầu Chat ngay</button>
         </div>
     </div>

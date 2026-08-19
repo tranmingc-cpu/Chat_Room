@@ -257,6 +257,40 @@ function handleKeyPress(e) {
     if (e.key === 'Enter') sendMessage();
 }
 
+// Xử lý upload avatar preview
+async function uploadAvatarPreview(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById("guest-avatar").value = data.url;
+        } else {
+            alert("Tải ảnh thất bại!");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi tải ảnh!");
+    } finally {
+        event.target.value = "";
+    }
+}
+
+// Lưu profile và đóng modal
+function saveGuestProfile() {
+    const modal = document.getElementById("guest-modal");
+    if (modal) modal.classList.add("hidden");
+}
+
 // 8. Tải danh sách tỉnh thành từ API
 function loadProvinces() {
     const locationSelect = document.getElementById("guest-location");
