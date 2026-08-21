@@ -2,22 +2,25 @@ let socket = null;
 let isMatched = false;
 let currentUserId = localStorage.getItem('chatUserId');
 if (!currentUserId) {
-    currentUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+    let lastId = parseInt(localStorage.getItem('lastGlobalUserId') || '0', 10);
+    currentUserId = (lastId + 1).toString();
+    localStorage.setItem('lastGlobalUserId', currentUserId);
     localStorage.setItem('chatUserId', currentUserId);
 }
 
-// 1. Lấy thông tin người dùng từ Form HTML (gồm Avatar, Tên, Tuổi, Thành phố)
+//  Lấy thông tin người dùng từ Form HTML (gồm Avatar, Tên, Tuổi, Thành phố)
 function getUserInfo() {
     return {
         id: currentUserId,
         avatar: document.getElementById("guest-avatar")?.value || "https://via.placeholder.com/150",
         name: document.getElementById("guest-name")?.value.trim() || "Người lạ",
         age: document.getElementById("guest-age")?.value || "N/A",
-        location: document.getElementById("guest-location")?.value || "Không xác định"
+        location: document.getElementById("guest-location")?.value || "Không xác định",
+        gender: document.getElementById("guest-gender")?.value || "khác"
     };
 }
 
-// 2. Khởi tạo và quản lý kết nối WebSocket
+// quản lý kết nối WebSocket
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
@@ -39,11 +42,13 @@ function connectWebSocket() {
 
     socket.onclose = () => {
         updateStatus("Mất kết nối Server. Đang thử lại...", "#dc3545");
+        const btnMatch = document.getElementById("btn-match");
+        if (btnMatch) btnMatch.disabled = false;
         setTimeout(connectWebSocket, 3000);
     };
 }
 
-// 3. Xử lý các sự kiện phản hồi từ Server
+// Xử lý các sự kiện phản hồi từ Server
 function handleServerEvent(data) {
     switch (data.type) {
         case 'MATCHED':
@@ -66,11 +71,11 @@ function handleServerEvent(data) {
 
         case 'PARTNER_LEFT':
             isMatched = false;
-            updateStatus("Người lạ đã thoát. Tự động tìm người mới...", "#ffc107");
+            updateStatus("Người lạ đã thoát. Hãy tìm người mới...", "#ffc107");
             appendMessage("Đối phương đã rời cuộc trò chuyện.", "system");
             clearPartnerInfo();
             toggleChatInput(false);
-            setTimeout(findMatch, 1500);
+            showFindRoomOverlay(true);
             break;
 
         default:
@@ -116,9 +121,9 @@ function rejectMatch() {
     showModal(false);
     isMatched = false;
     clearPartnerInfo();
-    appendMessage("Bạn đã từ chối trò chuyện. Đang tìm người khác...", "system");
+    appendMessage("Bạn đã từ chối trò chuyện. Hãy tìm phòng mới...", "system");
     socket.send(JSON.stringify({ action: "SKIP" }));
-    findMatch();
+    showFindRoomOverlay(true);
 }
 
 function exitAndFindNew() {
@@ -128,6 +133,19 @@ function exitAndFindNew() {
     clearPartnerInfo();
     appendMessage("Bạn đã thoát cuộc trò chuyện.", "system");
     toggleChatInput(false);
+    showFindRoomOverlay(true);
+}
+
+function showFindRoomOverlay(show) {
+    const overlay = document.getElementById("find-room-overlay");
+    if (overlay) {
+        if (show) overlay.classList.remove("hidden");
+        else overlay.classList.add("hidden");
+    }
+}
+
+function startFindMatch() {
+    showFindRoomOverlay(false);
     findMatch();
 }
 
@@ -310,8 +328,7 @@ function saveGuestProfile() {
     const modal = document.getElementById("guest-modal");
     if (modal) {
         modal.classList.add("hidden");
-        // Nếu người dùng đang trong phiên chat và cập nhật thông tin, 
-        // có thể gửi thông tin mới lên server hoặc chỉ lưu local cho phiên ghép đôi tiếp theo.
+
     }
 }
 

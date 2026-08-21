@@ -34,11 +34,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
-        Map<String, String> data = objectMapper.readValue(payload, Map.class);
-        String action = data.get("action");
+        Map<String, Object> data = objectMapper.readValue(payload, Map.class);
+        String action = (String) data.get("action");
 
         if ("FIND_MATCH".equals(action)) {
-            matchingService.addToQueue(session.getId());
+            Map<String, String> userInfo = (Map<String, String>) data.get("userInfo");
+            matchingService.addToQueue(session.getId(), userInfo != null ? userInfo : Map.of());
             tryMatch();
         } else if ("SEND_MSG".equals(action)) {
             String partnerId = userPartners.get(session.getId());
@@ -47,15 +48,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
                 Map<String, String> response = Map.of(
                         "type", "CHAT",
-                        "message", data.get("message"),
-                        "msgType", data.getOrDefault("msgType", "text") // Lấy msgType (image/video/text)
+                        "message", (String) data.get("message"),
+                        "msgType", (String) data.getOrDefault("msgType", "text") // Lấy msgType (image/video/text)
                 );
                 partnerSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
             }
         } else if ("SKIP".equals(action)) {
             disconnectPartner(session.getId());
-            matchingService.addToQueue(session.getId());
-            tryMatch();
+            Map<String, String> userInfo = (Map<String, String>) data.get("userInfo");
+            if (userInfo != null) {
+                matchingService.addToQueue(session.getId(), userInfo);
+                tryMatch();
+            }
         }
     }
 
@@ -81,9 +85,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             String roomId = matchingService.createRoomId();
 
             // Thông báo cho User 1
-            sendMessage(sessions.get(user1Id), Map.of("type", "MATCHED", "roomId", roomId));
+            Map<String, Object> msg1 = Map.of("type", "MATCHED", "roomId", roomId, "partnerInfo", matchingService.getUserInfo(user2Id));
+            sendMessage(sessions.get(user1Id), msg1);
             // Thông báo cho User 2
-            sendMessage(sessions.get(user2Id), Map.of("type", "MATCHED", "roomId", roomId));
+            Map<String, Object> msg2 = Map.of("type", "MATCHED", "roomId", roomId, "partnerInfo", matchingService.getUserInfo(user1Id));
+            sendMessage(sessions.get(user2Id), msg2);
         }
     }
 
@@ -98,7 +104,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void sendMessage(WebSocketSession session, Map<String, String> data) throws IOException {
+    private void sendMessage(WebSocketSession session, Map<String, Object> data) throws IOException {
         if (session != null && session.isOpen()) {
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(data)));
         }
