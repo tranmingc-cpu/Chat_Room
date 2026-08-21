@@ -29,6 +29,8 @@ function connectWebSocket() {
 
     socket.onopen = () => {
         updateStatus("Đã kết nối! Bấm 'Tìm Room' để bắt đầu.", "#28a745");
+        const btnMatch = document.getElementById("btn-match");
+        if (btnMatch) btnMatch.disabled = false;
     };
 
     socket.onmessage = (event) => {
@@ -328,8 +330,17 @@ function saveGuestProfile() {
     const modal = document.getElementById("guest-modal");
     if (modal) {
         modal.classList.add("hidden");
-
     }
+    
+    // Lưu thông tin vào localStorage để không bị mất khi F5
+    const profile = {
+        name: document.getElementById("guest-name")?.value.trim() || "",
+        age: document.getElementById("guest-age")?.value || "",
+        gender: document.getElementById("guest-gender")?.value || "khac",
+        location: document.getElementById("guest-location")?.value || "",
+        avatar: document.getElementById("guest-avatar")?.value || ""
+    };
+    localStorage.setItem("chatProfile", JSON.stringify(profile));
 }
 
 // 8. Tải danh sách tỉnh thành từ API
@@ -346,6 +357,15 @@ function loadProvinces() {
                 option.textContent = province.name;
                 locationSelect.appendChild(option);
             });
+            
+            // Khôi phục location đã lưu
+            try {
+                const savedProfile = localStorage.getItem("chatProfile");
+                if (savedProfile) {
+                    const profile = JSON.parse(savedProfile);
+                    if (profile.location) locationSelect.value = profile.location;
+                }
+            } catch(e) {}
         })
         .catch(error => {
             console.error("Lỗi khi load danh sách Tỉnh/Thành:", error);
@@ -356,6 +376,18 @@ function loadProvinces() {
 document.addEventListener("DOMContentLoaded", function () {
     const userIdEl = document.getElementById('user-id');
     if (userIdEl) userIdEl.innerText = currentUserId;
+
+    // Khôi phục thông tin profile từ localStorage
+    try {
+        const savedProfile = localStorage.getItem("chatProfile");
+        if (savedProfile) {
+            const profile = JSON.parse(savedProfile);
+            if (profile.name) document.getElementById("guest-name").value = profile.name;
+            if (profile.age) document.getElementById("guest-age").value = profile.age;
+            if (profile.gender) document.getElementById("guest-gender").value = profile.gender;
+            if (profile.avatar) document.getElementById("guest-avatar").value = profile.avatar;
+        }
+    } catch(e) {}
 
     loadProvinces();
     connectWebSocket();
