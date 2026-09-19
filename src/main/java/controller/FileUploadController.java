@@ -38,6 +38,19 @@ public class FileUploadController {
             return ResponseEntity.badRequest().body("Chỉ chấp nhận định dạng file Ảnh hoặc Video!");
         }
 
-        return ResponseEntity.ok("Upload thành công");
+        try {
+            String resourceType = contentType.startsWith("video/") ? "video" : "image";
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                    "resource_type", resourceType
+            ));
+
+            String url = (String) uploadResult.get("secure_url");
+
+            return ResponseEntity.ok(Map.of("url", url, "type", resourceType));
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Lỗi khi tải file lên máy chủ!"));
+        }
     }
 }
