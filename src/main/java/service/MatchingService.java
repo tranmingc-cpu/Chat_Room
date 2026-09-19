@@ -106,7 +106,6 @@ public class MatchingService {
             }
         }
 
-        // Tìm cặp: 3. Bất kỳ (nếu không có ai khác giới và không bị trùng người cũ)
         for (int i = 0; i < users.size(); i++) {
             for (int j = i + 1; j < users.size(); j++) {
                 String u1 = users.get(i);
