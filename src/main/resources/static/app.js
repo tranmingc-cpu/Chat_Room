@@ -8,7 +8,6 @@ if (!currentUserId) {
     localStorage.setItem('chatUserId', currentUserId);
 }
 
-//  Lấy thông tin người dùng từ Form HTML (gồm Avatar, Tên, Tuổi, Thành phố)
 function getUserInfo() {
     return {
         id: currentUserId,
