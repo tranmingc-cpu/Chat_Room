@@ -73,8 +73,8 @@ function handleServerEvent(data) {
         case 'PARTNER_LEFT':
             isMatched = false;
             updateStatus("Người lạ đã thoát. Hãy tìm người mới...", "#ffc107");
-            appendMessage("Đối phương đã rời cuộc trò chuyện.", "system");
             clearPartnerInfo();
+            clearChat();
             toggleChatInput(false);
             showFindRoomOverlay(true);
             break;
@@ -90,6 +90,9 @@ function findMatch() {
         alert("Chưa kết nối đến máy chủ. Vui lòng đợi trong giây lát!");
         return;
     }
+
+    // Xóa tin nhắn cũ trước khi tìm phòng mới
+    clearChat();
 
     const userInfo = getUserInfo();
 
@@ -122,7 +125,7 @@ function rejectMatch() {
     showModal(false);
     isMatched = false;
     clearPartnerInfo();
-    appendMessage("Bạn đã từ chối trò chuyện. Hãy tìm phòng mới...", "system");
+    clearChat();
     socket.send(JSON.stringify({ action: "SKIP" }));
     showFindRoomOverlay(true);
 }
@@ -132,7 +135,7 @@ function exitAndFindNew() {
     socket.send(JSON.stringify({ action: "SKIP" }));
     isMatched = false;
     clearPartnerInfo();
-    appendMessage("Bạn đã thoát cuộc trò chuyện.", "system");
+    clearChat();
     toggleChatInput(false);
     showFindRoomOverlay(true);
 }
@@ -262,7 +265,7 @@ function appendMediaMessage(url, type, sender) {
     msgDiv.className = `message ${sender}`;
 
     if (type === 'image') {
-        msgDiv.innerHTML = `<a href="${url}" target="_blank"><img src="${url}" alt="Hình ảnh" style="max-width:200px; border-radius:8px;" /></a>`;
+        msgDiv.innerHTML = `<img src="${url}" alt="Hình ảnh" style="max-width:200px; border-radius:8px; cursor:pointer;" onclick="openImageModal('${url}')" />`;
     } else if (type === 'video') {
         msgDiv.innerHTML = `<video src="${url}" controls style="max-width:250px; border-radius:8px;"></video>`;
     }
@@ -280,6 +283,13 @@ function appendMessage(msg, type) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+function clearChat() {
+    const chatBox = document.getElementById("chat-box");
+    if (chatBox) {
+        chatBox.innerHTML = "";
+    }
+}
+
 function handleKeyPress(e) {
     if (e.key === 'Enter') sendMessage();
 }
@@ -291,7 +301,7 @@ async function uploadAvatarPreview(event) {
 
     const formData = new FormData();
     formData.append("file", file);
-    
+
     try {
         const response = await fetch('/api/upload', {
             method: 'POST',
@@ -330,7 +340,7 @@ function saveGuestProfile() {
     if (modal) {
         modal.classList.add("hidden");
     }
-    
+
     // Lưu thông tin vào localStorage để không bị mất khi F5
     const profile = {
         name: document.getElementById("guest-name")?.value.trim() || "",
@@ -356,7 +366,7 @@ function loadProvinces() {
                 option.textContent = province.name;
                 locationSelect.appendChild(option);
             });
-            
+
             // Khôi phục location đã lưu
             try {
                 const savedProfile = localStorage.getItem("chatProfile");
@@ -364,7 +374,7 @@ function loadProvinces() {
                     const profile = JSON.parse(savedProfile);
                     if (profile.location) locationSelect.value = profile.location;
                 }
-            } catch(e) {}
+            } catch (e) { }
         })
         .catch(error => {
             console.error("Lỗi khi load danh sách Tỉnh/Thành:", error);
@@ -376,7 +386,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const userIdEl = document.getElementById('user-id');
     if (userIdEl) userIdEl.innerText = currentUserId;
 
-    // Khôi phục thông tin profile từ localStorage
     try {
         const savedProfile = localStorage.getItem("chatProfile");
         if (savedProfile) {
@@ -386,7 +395,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (profile.gender) document.getElementById("guest-gender").value = profile.gender;
             if (profile.avatar) document.getElementById("guest-avatar").value = profile.avatar;
         }
-    } catch(e) {}
+    } catch (e) { }
 
     loadProvinces();
     connectWebSocket();
@@ -397,4 +406,52 @@ function toggleSidebar() {
     const overlay = document.getElementById('sidebar-overlay');
     if (sidebar) sidebar.classList.toggle('active');
     if (overlay) overlay.classList.toggle('active');
+}
+
+// Chi tiết ảnh (Lightbox)
+function openImageModal(url) {
+    let modal = document.getElementById('image-preview-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'image-preview-modal';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.zIndex = '9999';
+        modal.style.cursor = 'zoom-out';
+        modal.onclick = function() {
+            modal.style.display = 'none';
+        };
+
+        const img = document.createElement('img');
+        img.id = 'image-preview-content';
+        img.style.maxWidth = '90%';
+        img.style.maxHeight = '90%';
+        img.style.borderRadius = '8px';
+        img.style.boxShadow = '0 8px 16px rgba(0,0,0,0.5)';
+        img.style.objectFit = 'contain';
+        
+        const closeBtn = document.createElement('span');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.top = '20px';
+        closeBtn.style.right = '40px';
+        closeBtn.style.color = '#fff';
+        closeBtn.style.fontSize = '50px';
+        closeBtn.style.fontWeight = 'bold';
+        closeBtn.style.cursor = 'pointer';
+
+        modal.appendChild(closeBtn);
+        modal.appendChild(img);
+        document.body.appendChild(modal);
+    }
+    
+    document.getElementById('image-preview-content').src = url;
+    modal.style.display = 'flex';
 }
