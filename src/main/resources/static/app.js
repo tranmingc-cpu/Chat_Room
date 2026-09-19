@@ -91,6 +91,9 @@ function findMatch() {
         return;
     }
 
+    // Xóa tin nhắn cũ trước khi tìm phòng mới
+    clearChat();
+
     const userInfo = getUserInfo();
 
     // Gửi thông tin User cùng hành động FIND_MATCH
@@ -280,6 +283,13 @@ function appendMessage(msg, type) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+function clearChat() {
+    const chatBox = document.getElementById("chat-box");
+    if (chatBox) {
+        chatBox.innerHTML = "";
+    }
+}
+
 function handleKeyPress(e) {
     if (e.key === 'Enter') sendMessage();
 }
@@ -291,7 +301,7 @@ async function uploadAvatarPreview(event) {
 
     const formData = new FormData();
     formData.append("file", file);
-    
+
     try {
         const response = await fetch('/api/upload', {
             method: 'POST',
@@ -330,7 +340,7 @@ function saveGuestProfile() {
     if (modal) {
         modal.classList.add("hidden");
     }
-    
+
     // Lưu thông tin vào localStorage để không bị mất khi F5
     const profile = {
         name: document.getElementById("guest-name")?.value.trim() || "",
@@ -356,7 +366,7 @@ function loadProvinces() {
                 option.textContent = province.name;
                 locationSelect.appendChild(option);
             });
-            
+
             // Khôi phục location đã lưu
             try {
                 const savedProfile = localStorage.getItem("chatProfile");
