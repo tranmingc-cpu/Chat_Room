@@ -73,8 +73,8 @@ function handleServerEvent(data) {
         case 'PARTNER_LEFT':
             isMatched = false;
             updateStatus("Người lạ đã thoát. Hãy tìm người mới...", "#ffc107");
-            appendMessage("Đối phương đã rời cuộc trò chuyện.", "system");
             clearPartnerInfo();
+            clearChat();
             toggleChatInput(false);
             showFindRoomOverlay(true);
             break;
@@ -125,7 +125,7 @@ function rejectMatch() {
     showModal(false);
     isMatched = false;
     clearPartnerInfo();
-    appendMessage("Bạn đã từ chối trò chuyện. Hãy tìm phòng mới...", "system");
+    clearChat();
     socket.send(JSON.stringify({ action: "SKIP" }));
     showFindRoomOverlay(true);
 }
@@ -135,7 +135,7 @@ function exitAndFindNew() {
     socket.send(JSON.stringify({ action: "SKIP" }));
     isMatched = false;
     clearPartnerInfo();
-    appendMessage("Bạn đã thoát cuộc trò chuyện.", "system");
+    clearChat();
     toggleChatInput(false);
     showFindRoomOverlay(true);
 }
@@ -374,7 +374,7 @@ function loadProvinces() {
                     const profile = JSON.parse(savedProfile);
                     if (profile.location) locationSelect.value = profile.location;
                 }
-            } catch(e) {}
+            } catch (e) { }
         })
         .catch(error => {
             console.error("Lỗi khi load danh sách Tỉnh/Thành:", error);
@@ -386,7 +386,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const userIdEl = document.getElementById('user-id');
     if (userIdEl) userIdEl.innerText = currentUserId;
 
-    // Khôi phục thông tin profile từ localStorage
     try {
         const savedProfile = localStorage.getItem("chatProfile");
         if (savedProfile) {
@@ -396,7 +395,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (profile.gender) document.getElementById("guest-gender").value = profile.gender;
             if (profile.avatar) document.getElementById("guest-avatar").value = profile.avatar;
         }
-    } catch(e) {}
+    } catch (e) { }
 
     loadProvinces();
     connectWebSocket();

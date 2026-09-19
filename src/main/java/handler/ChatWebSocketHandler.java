@@ -53,6 +53,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 );
                 partnerSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
             }
+        } else if ("TYPING".equals(action)) {
+            String partnerId = userPartners.get(session.getId());
+            if (partnerId != null && sessions.containsKey(partnerId)) {
+                WebSocketSession partnerSession = sessions.get(partnerId);
+                Map<String, String> response = Map.of("type", "TYPING");
+                partnerSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+            }
         } else if ("SKIP".equals(action)) {
             disconnectPartner(session.getId());
             Map<String, String> userInfo = (Map<String, String>) data.get("userInfo");
