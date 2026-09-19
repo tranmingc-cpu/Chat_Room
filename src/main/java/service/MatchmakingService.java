@@ -30,9 +30,7 @@ public class MatchmakingService {
     private static final int COOLDOWN_HOURS = 12;
     private static final int FALLBACK_WAIT_SECONDS = 10;
 
-    /**
-     * Thêm user vào hàng đợi và cố gắng match với một người CÙNG THÀNH PHỐ.
-     */
+
     public Room matchOrQueue(GuestSession user) {
         if (userRoomMap.containsKey(user.getId())) {
             return null; // Đang ở trong một phòng khác
@@ -50,9 +48,7 @@ public class MatchmakingService {
         return null;
     }
 
-    /**
-     * Tìm match khắt khe: Bắt buộc CÙNG THÀNH PHỐ và NGƯỢC GIỚI TÍNH
-     */
+
     private synchronized Room findStrictMatch(GuestSession user) {
         Iterator<GuestSession> iterator = waitingQueue.iterator();
         while (iterator.hasNext()) {
@@ -80,9 +76,6 @@ public class MatchmakingService {
         return null;
     }
 
-    /**
-     * Chạy ngầm mỗi 5 giây để quét những người chờ quá 10 giây (Ghép nới lỏng)
-     */
     @Scheduled(fixedDelay = 5000)
     public synchronized void scheduledSweepQueue() {
         if (waitingQueue.size() < 2) return;
@@ -110,9 +103,6 @@ public class MatchmakingService {
         }
     }
 
-    /**
-     * Tìm match nới lỏng: KHÔNG QUAN TÂM THÀNH PHỐ, chỉ cần ngược giới tính và cả 2 đều đã chờ đủ 10 giây
-     */
     private GuestSession findFallbackMatch(GuestSession user) {
         Instant now = Instant.now();
         for (GuestSession candidate : waitingQueue) {
