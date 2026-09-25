@@ -3,7 +3,7 @@ package model;
 import org.springframework.web.socket.WebSocketSession;
 import java.time.Instant;
 
-public class GuestSession {
+public class  GuestSession {
     private String clientId; // ID cố định từ frontend để định danh (ngay cả khi F5)
     private String id;       // WebSocket Session ID (sẽ thay đổi khi F5)
     private WebSocketSession session;

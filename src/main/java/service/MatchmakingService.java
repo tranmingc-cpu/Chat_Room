@@ -33,7 +33,7 @@ public class MatchmakingService {
 
     public Room matchOrQueue(GuestSession user) {
         if (userRoomMap.containsKey(user.getId())) {
-            return null; // Đang ở trong một phòng khác
+            return null;
         }
 
         Room room = findStrictMatch(user);

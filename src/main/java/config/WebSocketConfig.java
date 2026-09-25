@@ -19,8 +19,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // Cấu hình endpoint kết nối websocket: ws://localhost:8080/chat
-        registry.addHandler(chatWebSocketHandler, "/chat")
-                .setAllowedOrigins("*"); // Cho phép Web & App Mobile kết nối tới
+        registry.addHandler(chatWebSocketHandler, "/chat").setAllowedOrigins("*");
     }
 }

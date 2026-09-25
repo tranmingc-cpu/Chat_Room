@@ -148,6 +148,10 @@ function showFindRoomOverlay(show) {
     }
 }
 
+function closeFindRoomOverlay() {
+    showFindRoomOverlay(false);
+}
+
 function startFindMatch() {
     showFindRoomOverlay(false);
     findMatch();

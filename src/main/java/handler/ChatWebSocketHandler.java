@@ -15,10 +15,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final MatchingService matchingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Lưu trữ tất cả các kết nối đang Online: Key = SessionId, Value = WebSocketSession
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
-    // Lưu thông tin phòng chat: Key = SessionId, Value = PartnerSessionId
     private final Map<String, String> userPartners = new ConcurrentHashMap<>();
 
     public ChatWebSocketHandler(MatchingService matchingService) {
@@ -79,7 +77,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         System.out.println("User ngắt kết nối: " + sessionId);
     }
 
-    // Logic thử ghép đôi 2 người trong hàng chờ
     private synchronized void tryMatch() throws IOException {
         String[] matchedUsers = matchingService.matchUsers();
         if (matchedUsers != null) {
@@ -88,13 +85,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
             userPartners.put(user1Id, user2Id);
             userPartners.put(user2Id, user1Id);
-
             String roomId = matchingService.createRoomId();
-
-            // Thông báo cho User 1
             Map<String, Object> msg1 = Map.of("type", "MATCHED", "roomId", roomId, "partnerInfo", matchingService.getUserInfo(user2Id));
             sendMessage(sessions.get(user1Id), msg1);
-            // Thông báo cho User 2
             Map<String, Object> msg2 = Map.of("type", "MATCHED", "roomId", roomId, "partnerInfo", matchingService.getUserInfo(user1Id));
             sendMessage(sessions.get(user2Id), msg2);
         }

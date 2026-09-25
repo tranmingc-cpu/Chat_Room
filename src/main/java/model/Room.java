@@ -31,7 +31,6 @@ public class Room {
     private UserStatus user1Status;
     private UserStatus user2Status;
     
-    // Lưu tạm tin nhắn của người vào trước trong lúc chờ người kia
     private List<ChatMessage> pendingMessages;
 
     public Room(GuestSession user1, GuestSession user2) {

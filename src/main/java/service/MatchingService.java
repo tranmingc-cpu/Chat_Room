@@ -14,7 +14,7 @@ public class MatchingService {
 
     private final Set<String> waitingPool = new CopyOnWriteArraySet<>();
     private final Map<String, String> userInfoMap = new ConcurrentHashMap<>();
-    private final Map<String, String> lastPartnerMap = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Long>> matchHistory = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public MatchingService() {
@@ -30,7 +30,6 @@ public class MatchingService {
         }
     }
 
-    // Lấy thông tin user
     public Map<String, String> getUserInfo(String sessionId) {
         String info = userInfoMap.get(sessionId);
         if (info != null) {
@@ -133,18 +132,35 @@ public class MatchingService {
     }
 
     private boolean hasJustMatched(String u1, String u2) {
-        String lp1 = lastPartnerMap.get(u1);
-        String lp2 = lastPartnerMap.get(u2);
-        return (lp1 != null && lp1.equals(u2)) || (lp2 != null && lp2.equals(u1));
+        long currentTime = System.currentTimeMillis();
+        long twelveHoursInMillis = 12 * 60 * 60 * 1000L;
+
+        Map<String, Long> history1 = matchHistory.get(u1);
+        if (history1 != null) {
+            Long matchTime = history1.get(u2);
+            if (matchTime != null && (currentTime - matchTime) < twelveHoursInMillis) {
+                return true;
+            }
+        }
+
+        Map<String, Long> history2 = matchHistory.get(u2);
+        if (history2 != null) {
+            Long matchTime = history2.get(u1);
+            if (matchTime != null && (currentTime - matchTime) < twelveHoursInMillis) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String[] finalizeMatch(String user1, String user2) {
         waitingPool.remove(user1);
         waitingPool.remove(user2);
 
-        // Ghi nhớ người vừa match để tránh match lại ngay lập tức
-        lastPartnerMap.put(user1, user2);
-        lastPartnerMap.put(user2, user1);
+        // Ghi nhớ người vừa match và thời gian để tránh match lại trong 12h
+        long currentTime = System.currentTimeMillis();
+        matchHistory.computeIfAbsent(user1, k -> new ConcurrentHashMap<>()).put(user2, currentTime);
+        matchHistory.computeIfAbsent(user2, k -> new ConcurrentHashMap<>()).put(user1, currentTime);
 
         return new String[] { user1, user2 };
     }

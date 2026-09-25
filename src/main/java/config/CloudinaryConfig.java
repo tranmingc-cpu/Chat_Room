@@ -12,8 +12,8 @@ import org.springframework.context.annotation.Configuration;
         public Cloudinary cloudinary() {
             return new Cloudinary(ObjectUtils.asMap(
                     "cloud_name", "que3l9nf",
-                    "api_key", "819963475572451",       // Thay bằng API Key
-                    "api_secret", "EkI704-AhvV1_MXbsnSetrndbdw"   // Thay bằng API Secret
+                    "api_key", "819963475572451",
+                    "api_secret", "EkI704-AhvV1_MXbsnSetrndbdw"
             ));
         }
     }
