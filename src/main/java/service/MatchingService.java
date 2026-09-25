@@ -157,7 +157,6 @@ public class MatchingService {
         waitingPool.remove(user1);
         waitingPool.remove(user2);
 
-        // Ghi nhớ người vừa match và thời gian để tránh match lại trong 12h
         long currentTime = System.currentTimeMillis();
         matchHistory.computeIfAbsent(user1, k -> new ConcurrentHashMap<>()).put(user2, currentTime);
         matchHistory.computeIfAbsent(user2, k -> new ConcurrentHashMap<>()).put(user1, currentTime);
@@ -165,7 +164,6 @@ public class MatchingService {
         return new String[] { user1, user2 };
     }
 
-    // Tạo Room ID ngẫu nhiên
     public String createRoomId() {
         return "room_" + UUID.randomUUID().toString().substring(0, 8);
     }
