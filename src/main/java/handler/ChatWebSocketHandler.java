@@ -65,6 +65,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 matchingService.addToQueue(session.getId(), userInfo);
                 tryMatch();
             }
+        } else if ("CANCEL_MATCH".equals(action)) {
+            matchingService.removeFromQueue(session.getId());
         }
     }
 

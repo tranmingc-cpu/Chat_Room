@@ -53,6 +53,7 @@ function connectWebSocket() {
 function handleServerEvent(data) {
     switch (data.type) {
         case 'MATCHED':
+            showLoadingOverlay(false);
             showModal(true);
             updateStatus("Tìm thấy room! Đang chờ bạn xác nhận...", "#ffc107");
 
@@ -103,11 +104,30 @@ function findMatch() {
     }));
 
     updateStatus("Đang tìm kiếm room ngẫu nhiên...", "#ffc107");
+    showLoadingOverlay(true);
 
     const btnMatch = document.getElementById("btn-match");
     const btnExit = document.getElementById("btn-exit");
     if (btnMatch) btnMatch.disabled = true;
     if (btnExit) btnExit.disabled = true;
+}
+
+function showLoadingOverlay(show) {
+    const overlay = document.getElementById("loading-overlay");
+    if (overlay) {
+        if (show) overlay.classList.remove("hidden");
+        else overlay.classList.add("hidden");
+    }
+}
+
+function cancelSearch() {
+    showLoadingOverlay(false);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ action: "CANCEL_MATCH" }));
+    }
+    updateStatus("Đã hủy tìm kiếm.", "#6c757d");
+    const btnMatch = document.getElementById("btn-match");
+    if (btnMatch) btnMatch.disabled = false;
 }
 
 function acceptMatch() {

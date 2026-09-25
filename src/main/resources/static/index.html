@@ -111,6 +111,15 @@
         </div>
     </div>
 
+    <!-- Loading Spinner Overlay -->
+    <div id="loading-overlay" class="modal-overlay hidden">
+        <div class="modal-content" style="background: transparent; box-shadow: none; align-items: center;">
+            <img src="cat-loading.jpg" alt="Sleeping Cat" class="sleeping-cat-icon">
+            <h3 style="color: white; margin-top: 15px; font-weight: 500;">Đang tìm kiếm...</h3>
+            <button class="btn-reject" style="margin-top: 10px; padding: 10px 30px; width: auto;" onclick="cancelSearch()">Hủy tìm kiếm</button>
+        </div>
+    </div>
+
     <div id="find-room-overlay" class="modal-overlay hidden">
         <div class="modal-content" style="text-align: center; position: relative;">
             <button onclick="closeFindRoomOverlay()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #94a3b8; transition: color 0.2s;">&times;</button>
