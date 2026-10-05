@@ -20,7 +20,6 @@ public class MatchingService {
     public MatchingService() {
     }
 
-    // Thêm user vào hàng chờ
     public void addToQueue(String sessionId, Map<String, String> userInfo) {
         try {
             userInfoMap.put(sessionId, objectMapper.writeValueAsString(userInfo));
@@ -43,13 +42,11 @@ public class MatchingService {
         return Collections.emptyMap();
     }
 
-    // Xóa user khỏi hàng chờ
     public void removeFromQueue(String sessionId) {
         waitingPool.remove(sessionId);
         userInfoMap.remove(sessionId);
     }
 
-    // Ghép đôi có điều kiện
     public String[] matchUsers() {
         if (waitingPool.size() < 2) {
             return null;
@@ -66,6 +63,8 @@ public class MatchingService {
             for (int j = i + 1; j < users.size(); j++) {
                 String u1 = users.get(i);
                 String u2 = users.get(j);
+
+                if (!waitingPool.contains(u1) || !waitingPool.contains(u2)) continue;
 
                 if (hasJustMatched(u1, u2))
                     continue;
@@ -84,11 +83,12 @@ public class MatchingService {
             }
         }
 
-        // Tìm cặp: 2. Khác giới (ưu tiên thấp hơn)
         for (int i = 0; i < users.size(); i++) {
             for (int j = i + 1; j < users.size(); j++) {
                 String u1 = users.get(i);
                 String u2 = users.get(j);
+
+                if (!waitingPool.contains(u1) || !waitingPool.contains(u2)) continue;
 
                 if (hasJustMatched(u1, u2))
                     continue;
@@ -105,11 +105,12 @@ public class MatchingService {
             }
         }
 
-        // Tìm cặp: 3. Bất kỳ (nếu không có ai khác giới và không bị trùng người cũ)
         for (int i = 0; i < users.size(); i++) {
             for (int j = i + 1; j < users.size(); j++) {
                 String u1 = users.get(i);
                 String u2 = users.get(j);
+
+                if (!waitingPool.contains(u1) || !waitingPool.contains(u2)) continue;
 
                 if (hasJustMatched(u1, u2))
                     continue;
@@ -133,12 +134,12 @@ public class MatchingService {
 
     private boolean hasJustMatched(String u1, String u2) {
         long currentTime = System.currentTimeMillis();
-        long twelveHoursInMillis = 12 * 60 * 60 * 1000L;
+        long limitInMillis = 24 * 60 * 60 * 1000L;
 
         Map<String, Long> history1 = matchHistory.get(u1);
         if (history1 != null) {
             Long matchTime = history1.get(u2);
-            if (matchTime != null && (currentTime - matchTime) < twelveHoursInMillis) {
+            if (matchTime != null && (currentTime - matchTime) < limitInMillis) {
                 return true;
             }
         }
@@ -146,11 +147,22 @@ public class MatchingService {
         Map<String, Long> history2 = matchHistory.get(u2);
         if (history2 != null) {
             Long matchTime = history2.get(u1);
-            if (matchTime != null && (currentTime - matchTime) < twelveHoursInMillis) {
+            if (matchTime != null && (currentTime - matchTime) < limitInMillis) {
                 return true;
             }
         }
         return false;
+    }
+
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 3600000)
+    public void cleanupMatchHistory() {
+        long currentTime = System.currentTimeMillis();
+        long limitInMillis = 24 * 60 * 60 * 1000L;
+
+        matchHistory.entrySet().removeIf(entry -> {
+            entry.getValue().values().removeIf(time -> (currentTime - time) >= limitInMillis);
+            return entry.getValue().isEmpty();
+        });
     }
 
     private String[] finalizeMatch(String user1, String user2) {

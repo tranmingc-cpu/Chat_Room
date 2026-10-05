@@ -19,7 +19,6 @@ function getUserInfo() {
     };
 }
 
-// quản lý kết nối WebSocket
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
@@ -49,7 +48,6 @@ function connectWebSocket() {
     };
 }
 
-// Xử lý các sự kiện phản hồi từ Server
 function handleServerEvent(data) {
     switch (data.type) {
         case 'MATCHED':
@@ -57,7 +55,6 @@ function handleServerEvent(data) {
             showModal(true);
             updateStatus("Tìm thấy room! Đang chờ bạn xác nhận...", "#ffc107");
 
-            // Hiển thị thông tin đối phương: Avatar, Tên, Tuổi, Thành phố
             if (data.partnerInfo) {
                 displayPartnerInfo(data.partnerInfo);
             }
@@ -85,19 +82,16 @@ function handleServerEvent(data) {
     }
 }
 
-// 4. Các chức năng điều khiển cuộc trò chuyện
 function findMatch() {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
         alert("Chưa kết nối đến máy chủ. Vui lòng đợi trong giây lát!");
         return;
     }
 
-    // Xóa tin nhắn cũ trước khi tìm phòng mới
     clearChat();
 
     const userInfo = getUserInfo();
 
-    // Gửi thông tin User cùng hành động FIND_MATCH
     socket.send(JSON.stringify({
         action: "FIND_MATCH",
         userInfo: userInfo
@@ -187,7 +181,6 @@ function sendMessage() {
     }
 }
 
-// 5. Quản lý tải File & Media
 async function uploadAndSendFile(event) {
     const file = event.target.files[0];
     if (!file || !isMatched) return;
@@ -222,7 +215,6 @@ async function uploadAndSendFile(event) {
     }
 }
 
-// 6. Hiển thị duy nhất Avatar, Tên, Tuổi, Thành phố của đối phương
 function displayPartnerInfo(info) {
     const avatarEl = document.getElementById("partner-avatar");
     const nameEl = document.getElementById("partner-name");
@@ -249,7 +241,6 @@ function clearPartnerInfo() {
     if (locationEl) locationEl.innerText = "";
 }
 
-// 7. Cập nhật giao diện & DOM
 function updateStatus(text, color) {
     const statusBox = document.getElementById("status");
     if (statusBox) {
@@ -318,7 +309,6 @@ function handleKeyPress(e) {
     if (e.key === 'Enter') sendMessage();
 }
 
-// Xử lý upload avatar preview
 async function uploadAvatarPreview(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -346,7 +336,6 @@ async function uploadAvatarPreview(event) {
     }
 }
 
-// Mở modal hồ sơ
 function openProfileModal() {
     const modal = document.getElementById("guest-modal");
     if (modal) {
@@ -358,14 +347,12 @@ function openProfileModal() {
     }
 }
 
-// Lưu profile và đóng modal
 function saveGuestProfile() {
     const modal = document.getElementById("guest-modal");
     if (modal) {
         modal.classList.add("hidden");
     }
 
-    // Lưu thông tin vào localStorage để không bị mất khi F5
     const profile = {
         name: document.getElementById("guest-name")?.value.trim() || "",
         age: document.getElementById("guest-age")?.value || "",
@@ -376,7 +363,6 @@ function saveGuestProfile() {
     localStorage.setItem("chatProfile", JSON.stringify(profile));
 }
 
-// 8. Tải danh sách tỉnh thành từ API
 function loadProvinces() {
     const locationSelect = document.getElementById("guest-location");
     if (!locationSelect) return;
@@ -391,7 +377,6 @@ function loadProvinces() {
                 locationSelect.appendChild(option);
             });
 
-            // Khôi phục location đã lưu
             try {
                 const savedProfile = localStorage.getItem("chatProfile");
                 if (savedProfile) {
@@ -405,7 +390,6 @@ function loadProvinces() {
         });
 }
 
-// 9. Khởi chạy khi trang web sẵn sàng
 document.addEventListener("DOMContentLoaded", function () {
     const userIdEl = document.getElementById('user-id');
     if (userIdEl) userIdEl.innerText = currentUserId;
@@ -432,7 +416,6 @@ function toggleSidebar() {
     if (overlay) overlay.classList.toggle('active');
 }
 
-// Chi tiết ảnh (Lightbox)
 function openImageModal(url) {
     let modal = document.getElementById('image-preview-modal');
     if (!modal) {

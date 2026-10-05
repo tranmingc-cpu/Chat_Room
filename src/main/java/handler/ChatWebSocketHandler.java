@@ -47,7 +47,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 Map<String, String> response = Map.of(
                         "type", "CHAT",
                         "message", (String) data.get("message"),
-                        "msgType", (String) data.getOrDefault("msgType", "text") // Lấy msgType (image/video/text)
+                        "msgType", (String) data.getOrDefault("msgType", "text")
                 );
                 partnerSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
             }
@@ -80,8 +80,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private synchronized void tryMatch() throws IOException {
-        String[] matchedUsers = matchingService.matchUsers();
-        if (matchedUsers != null) {
+        String[] matchedUsers;
+        while ((matchedUsers = matchingService.matchUsers()) != null) {
             String user1Id = matchedUsers[0];
             String user2Id = matchedUsers[1];
 
