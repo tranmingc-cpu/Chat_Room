@@ -301,7 +301,8 @@ function appendMessage(msg, type) {
 function clearChat() {
     const chatBox = document.getElementById("chat-box");
     if (chatBox) {
-        chatBox.innerHTML = "";
+        const messages = chatBox.querySelectorAll('.message');
+        messages.forEach(msg => msg.remove());
     }
 }
 
