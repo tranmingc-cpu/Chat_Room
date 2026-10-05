@@ -57,6 +57,9 @@
         <div id="guest-modal" class="modal-overlay">
             <div class="modal-content">
                 <h3>👋 Nhập thông tin để tìm bạn</h3>
+                <div class="avatar-preview-container" style="text-align: center; margin-bottom: 15px;">
+                    <img id="guest-avatar-preview" src="https://via.placeholder.com/150" alt="Avatar Preview" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #e4e6eb; cursor: pointer;" onclick="document.getElementById('guest-avatar-file').click()" title="Nhấn để tải ảnh lên">
+                </div>
                 <input type="text" id="guest-name" placeholder="Nhập biệt danh của bạn" />
 
                 <input type="text" id="guest-age" inputmode="numeric" pattern="[0-9]*"

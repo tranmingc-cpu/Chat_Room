@@ -325,8 +325,10 @@ async function uploadAvatarPreview(event) {
 
         if (response.ok) {
             const data = await response.json();
-            document.getElementById("guest-avatar").value = data.url;
-            document.getElementById("guest-avatar-preview").src = data.url;
+            const avatarInput = document.getElementById("guest-avatar");
+            if (avatarInput) avatarInput.value = data.url;
+            const previewEl = document.getElementById("guest-avatar-preview");
+            if (previewEl) previewEl.src = data.url;
         } else {
             alert("Tải ảnh thất bại!");
         }
@@ -416,8 +418,10 @@ document.addEventListener("DOMContentLoaded", function () {
             if (profile.age) document.getElementById("guest-age").value = profile.age;
             if (profile.gender) document.getElementById("guest-gender").value = profile.gender;
             if (profile.avatar) {
-                document.getElementById("guest-avatar").value = profile.avatar;
-                document.getElementById("guest-avatar-preview").src = profile.avatar;
+                const avatarInput = document.getElementById("guest-avatar");
+                if (avatarInput) avatarInput.value = profile.avatar;
+                const previewEl = document.getElementById("guest-avatar-preview");
+                if (previewEl) previewEl.src = profile.avatar;
             }
             updateUserProfileDisplay(profile);
         }
