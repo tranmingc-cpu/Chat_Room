@@ -47,7 +47,7 @@ body {
 }
 
 .header-bar h2 {
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     font-weight: 600;
     color: #050505;
 }
@@ -69,9 +69,9 @@ body {
 }
 
 .status-box {
-    padding: 6px 12px;
+    padding: 10px 16px;
     text-align: center;
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     background-color: #fffbe6;
     color: #d48806;
     border-bottom: 1px solid #ffe58f;
@@ -88,8 +88,8 @@ body {
 }
 
 #partner-avatar {
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     object-fit: cover;
     background-color: #e4e6eb;
@@ -101,13 +101,13 @@ body {
 }
 
 #partner-name {
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     font-weight: 600;
     color: #050505;
 }
 
 #partner-card p {
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     color: #65676b;
     margin-top: 2px;
 }
@@ -133,8 +133,8 @@ body {
 
 .message {
     max-width: 65%;
-    padding: 8px 12px;
-    font-size: 0.95rem;
+    padding: 12px 16px;
+    font-size: 1.1rem;
     line-height: 1.4;
     word-break: break-word;
     border-radius: 18px;
@@ -158,8 +158,8 @@ body {
     align-self: center;
     background-color: transparent;
     color: #65676b;
-    font-size: 0.8rem;
-    padding: 4px 0;
+    font-size: 0.95rem;
+    padding: 8px 0;
     max-width: 90%;
     text-align: center;
 }
@@ -181,11 +181,11 @@ body {
 
 .controls button {
     flex: 1;
-    padding: 10px;
+    padding: 14px;
     border: none;
     border-radius: 6px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 1.05rem;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -222,11 +222,11 @@ body {
 
 .input-group input[type="text"] {
     flex: 1;
-    padding: 10px 16px;
+    padding: 14px 20px;
     border: 1px solid #ccd0d5;
     border-radius: 20px;
     outline: none;
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     background-color: #f0f2f5;
     color: #050505;
 }
@@ -236,8 +236,8 @@ body {
 }
 
 .input-group button {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border: none;
     border-radius: 50%;
     background-color: transparent;
@@ -281,7 +281,7 @@ body {
     background-color: #ffffff;
     width: 100%;
     max-width: 400px;
-    padding: 24px;
+    padding: 32px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     border: 1px solid #ddd;
@@ -299,7 +299,7 @@ body {
 
 .modal-content h3 {
     color: #050505;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     font-weight: 600;
     text-align: center;
     margin-bottom: 4px;
@@ -308,17 +308,17 @@ body {
 .modal-content p {
     text-align: center;
     color: #65676b;
-    font-size: 0.9rem;
+    font-size: 1.05rem;
     margin-bottom: 8px;
 }
 
 .modal-content input,
 .modal-content select {
     width: 100%;
-    padding: 10px 12px;
+    padding: 14px 16px;
     border: 1px solid #ccd0d5;
     border-radius: 6px;
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     outline: none;
     color: #050505;
 }
@@ -347,12 +347,12 @@ body {
 .btn-accept,
 .btn-reject {
     flex: 1;
-    padding: 10px;
+    padding: 14px;
     border: none;
     border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -402,8 +402,8 @@ body {
 }
 
 .sleeping-cat-icon {
-    width: 80px;
-    height: 80px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     object-fit: cover;
     margin: 0 auto 10px auto;
@@ -466,12 +466,12 @@ body {
 }
 
 .sidebar-item {
-    padding: 12px 20px;
+    padding: 16px 24px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 12px;
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     color: #050505;
     transition: background-color 0.2s;
 }
