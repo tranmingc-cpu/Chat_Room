@@ -326,6 +326,7 @@ async function uploadAvatarPreview(event) {
         if (response.ok) {
             const data = await response.json();
             document.getElementById("guest-avatar").value = data.url;
+            document.getElementById("guest-avatar-preview").src = data.url;
         } else {
             alert("Tải ảnh thất bại!");
         }
@@ -334,6 +335,17 @@ async function uploadAvatarPreview(event) {
         alert("Lỗi tải ảnh!");
     } finally {
         event.target.value = "";
+    }
+}
+
+function updateUserProfileDisplay(profile) {
+    const avatarEl = document.getElementById("my-avatar-display");
+    const nameEl = document.getElementById("my-name-display");
+    if (avatarEl) {
+        avatarEl.src = profile.avatar || "https://via.placeholder.com/150";
+    }
+    if (nameEl) {
+        nameEl.innerText = profile.name || "Người lạ";
     }
 }
 
@@ -362,6 +374,7 @@ function saveGuestProfile() {
         avatar: document.getElementById("guest-avatar")?.value || ""
     };
     localStorage.setItem("chatProfile", JSON.stringify(profile));
+    updateUserProfileDisplay(profile);
 }
 
 function loadProvinces() {
@@ -402,9 +415,23 @@ document.addEventListener("DOMContentLoaded", function () {
             if (profile.name) document.getElementById("guest-name").value = profile.name;
             if (profile.age) document.getElementById("guest-age").value = profile.age;
             if (profile.gender) document.getElementById("guest-gender").value = profile.gender;
-            if (profile.avatar) document.getElementById("guest-avatar").value = profile.avatar;
+            if (profile.avatar) {
+                document.getElementById("guest-avatar").value = profile.avatar;
+                document.getElementById("guest-avatar-preview").src = profile.avatar;
+            }
+            updateUserProfileDisplay(profile);
         }
     } catch (e) { }
+
+    const guestAvatarInput = document.getElementById("guest-avatar");
+    if (guestAvatarInput) {
+        guestAvatarInput.addEventListener("input", function(e) {
+            const preview = document.getElementById("guest-avatar-preview");
+            if (preview) {
+                preview.src = e.target.value || "https://via.placeholder.com/150";
+            }
+        });
+    }
 
     loadProvinces();
     connectWebSocket();
