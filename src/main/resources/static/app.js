@@ -1,12 +1,7 @@
 let socket = null;
 let isMatched = false;
 let currentUserId = localStorage.getItem('chatUserId');
-if (!currentUserId) {
-    let lastId = parseInt(localStorage.getItem('lastGlobalUserId') || '0', 10);
-    currentUserId = (lastId + 1).toString();
-    localStorage.setItem('lastGlobalUserId', currentUserId);
-    localStorage.setItem('chatUserId', currentUserId);
-}
+// Không tạo ID cục bộ nữa, Server sẽ cấp ID.
 
 function getUserInfo() {
     return {
@@ -82,10 +77,22 @@ function handleServerEvent(data) {
     }
 }
 
-function findMatch() {
+async function findMatch() {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
         alert("Chưa kết nối đến máy chủ. Vui lòng đợi trong giây lát!");
         return;
+    }
+    
+    // Kiểm tra ban trước khi tìm
+    if (currentUserId) {
+        try {
+            const res = await fetch(`/api/users/${currentUserId}/check-ban`);
+            const isBanned = await res.json();
+            if (isBanned) {
+                alert("Tài khoản của bạn đã bị cấm chat!");
+                return;
+            }
+        } catch(e) {}
     }
 
     clearChat();
@@ -362,7 +369,7 @@ function openProfileModal() {
     }
 }
 
-function saveGuestProfile() {
+async function saveGuestProfile() {
     const modal = document.getElementById("guest-modal");
     if (modal) {
         modal.classList.add("hidden");
@@ -375,6 +382,35 @@ function saveGuestProfile() {
         location: document.getElementById("guest-location")?.value || "",
         avatar: document.getElementById("guest-avatar")?.value || ""
     };
+    
+    // Nếu đã có ID thì gửi kèm để update
+    if (currentUserId) {
+        profile.id = currentUserId;
+    }
+
+    try {
+        const response = await fetch('/api/users/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profile)
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            // Server trả về ID chuẩn, lưu lại vào biến và localStorage
+            currentUserId = data.id.toString();
+            localStorage.setItem("chatUserId", currentUserId);
+            
+            // Nếu bị ban
+            if (data.banned) {
+                alert("Tài khoản của bạn đã bị cấm chat!");
+                // Có thể disable nút tìm kiếm ở đây
+            }
+        }
+    } catch (e) {
+        console.error("Lỗi đăng ký user:", e);
+    }
+
     localStorage.setItem("chatProfile", JSON.stringify(profile));
     updateUserProfileDisplay(profile);
 }
@@ -407,8 +443,13 @@ function loadProvinces() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-    const userIdEl = document.getElementById('user-id');
-    if (userIdEl) userIdEl.innerText = currentUserId;
+    // Đăng ký tự động nếu chưa có ID
+    if (!currentUserId) {
+        saveGuestProfile(); // Sẽ gọi API để lấy ID mới
+    } else {
+        const userIdEl = document.getElementById('user-id');
+        if (userIdEl) userIdEl.innerText = currentUserId;
+    }
 
     try {
         const savedProfile = localStorage.getItem("chatProfile");
@@ -424,6 +465,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (previewEl) previewEl.src = profile.avatar;
             }
             updateUserProfileDisplay(profile);
+            
+            // Cập nhật lại thông tin mới nhất lên Server
+            saveGuestProfile();
         }
     } catch (e) { }
 
