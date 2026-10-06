@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+        .btn { padding: 10px 20px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 10px; }
+        .btn-small { padding: 5px 10px; font-size: 12px; margin: 0 2px; }
+        .btn-ban { background-color: #ff9800; }
+        .btn-delete { background-color: #f44336; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Bảng điều khiển Admin</h1>
+        <p>Tổng số tài khoản: <b id="total-users">0</b></p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tên</th>
+                    <th>Tuổi</th>
+                    <th>Giới tính</th>
+                    <th>Khu vực</th>
+                    <th>Trạng thái</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="user-table-body">
+            </tbody>
+        </table>
+
+        <br>
+        <a href="/logout" class="btn">Đăng xuất</a>
+    </div>
+
+    <script>
+        async function loadUsers() {
+            try {
+                const res = await fetch('/admin/api/users');
+                const users = await res.json();
+                
+                document.getElementById('total-users').innerText = users.length;
+                
+                const tbody = document.getElementById('user-table-body');
+                tbody.innerHTML = '';
+                
+                users.forEach(user => {
+                    const statusText = user.banned ? '<span style="color:red">Banned</span>' : '<span style="color:green">Active</span>';
+                    const banAction = user.banned 
+                        ? `<button class="btn btn-small btn-ban" onclick="toggleBan(${user.id}, false)">Gỡ Ban</button>`
+                        : `<button class="btn btn-small btn-ban" onclick="toggleBan(${user.id}, true)">Ban</button>`;
+                        
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.name || 'Người lạ'}</td>
+                            <td>${user.age || ''}</td>
+                            <td>${user.gender || ''}</td>
+                            <td>${user.location || ''}</td>
+                            <td>${statusText}</td>
+                            <td>
+                                ${banAction}
+                                <button class="btn btn-small btn-delete" onclick="deleteUser(${user.id})">Xóa</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch(e) {
+                console.error("Lỗi tải danh sách:", e);
+            }
+        }
+        
+        async function toggleBan(id, isBanned) {
+            if (confirm(`Bạn có chắc muốn ${isBanned ? 'BAN' : 'GỠ BAN'} người dùng này?`)) {
+                await fetch(`/admin/api/users/${id}/ban?banned=${isBanned}`, { method: 'POST' });
+                loadUsers();
+            }
+        }
+        
+        async function deleteUser(id) {
+            if (confirm("Bạn có chắc muốn xóa vĩnh viễn người dùng này?")) {
+                await fetch(`/admin/api/users/${id}`, { method: 'DELETE' });
+                loadUsers();
+            }
+        }
+
+        window.onload = loadUsers;
+
+    </script>
+</body>
+</html>
