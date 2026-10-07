@@ -20,23 +20,33 @@ public class UserController {
 
     
     @PostMapping("/api/users/register")
-    public ResponseEntity<ChatUser> registerOrUpdateUser(@RequestBody ChatUser userRequest) {
+    public ResponseEntity<ChatUser> registerOrUpdateUser(@RequestBody ChatUser userRequest, jakarta.servlet.http.HttpServletRequest request) {
+        String ip = request.getRemoteAddr();
         ChatUser savedUser;
+        
+        Optional<ChatUser> existingUser = Optional.empty();
         if (userRequest.getId() != null) {
-            Optional<ChatUser> existingUser = chatUserRepository.findById(userRequest.getId());
-            if (existingUser.isPresent()) {
-                ChatUser u = existingUser.get();
-                if (userRequest.getName() != null && !userRequest.getName().isEmpty()) u.setName(userRequest.getName());
-                if (userRequest.getAge() != null) u.setAge(userRequest.getAge());
-                if (userRequest.getGender() != null) u.setGender(userRequest.getGender());
-                if (userRequest.getLocation() != null) u.setLocation(userRequest.getLocation());
-                if (userRequest.getAvatar() != null) u.setAvatar(userRequest.getAvatar());
-                
-                savedUser = chatUserRepository.save(u);
-                return ResponseEntity.ok(savedUser);
-            }
+            existingUser = chatUserRepository.findById(userRequest.getId());
         }
         
+        if (existingUser.isEmpty()) {
+            existingUser = chatUserRepository.findByIpAddress(ip);
+        }
+
+        if (existingUser.isPresent()) {
+            ChatUser u = existingUser.get();
+            if (userRequest.getName() != null && !userRequest.getName().isEmpty()) u.setName(userRequest.getName());
+            if (userRequest.getAge() != null) u.setAge(userRequest.getAge());
+            if (userRequest.getGender() != null) u.setGender(userRequest.getGender());
+            if (userRequest.getLocation() != null) u.setLocation(userRequest.getLocation());
+            if (userRequest.getAvatar() != null) u.setAvatar(userRequest.getAvatar());
+            u.setIpAddress(ip);
+            
+            savedUser = chatUserRepository.save(u);
+            return ResponseEntity.ok(savedUser);
+        }
+        
+        userRequest.setIpAddress(ip);
         savedUser = chatUserRepository.save(userRequest);
         return ResponseEntity.ok(savedUser);
     }

@@ -19,6 +19,8 @@ public class ChatUser {
     @Column(length = 1000)
     private String avatar;
 
+    private String ipAddress;
+
     private boolean isBanned = false;
 
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -29,6 +31,9 @@ public class ChatUser {
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public String getIpAddress() { return ipAddress; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
