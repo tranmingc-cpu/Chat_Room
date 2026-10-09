@@ -1,7 +1,6 @@
 let socket = null;
 let isMatched = false;
 let currentUserId = localStorage.getItem('chatUserId');
-// Không tạo ID cục bộ nữa, Server sẽ cấp ID.
 
 function getUserInfo() {
     return {
@@ -13,14 +12,19 @@ function getUserInfo() {
         gender: document.getElementById("guest-gender")?.value || "khác"
     };
 }
-
+let socket = null;
+let isReconnecting = false;
 function connectWebSocket() {
+    if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
+        return;
+    }
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
 
     socket = new WebSocket(`${protocol}//${host}/chat`);
 
     socket.onopen = () => {
+        isReconnecting = false;
         updateStatus("Đã kết nối! Bấm 'Tìm Room' để bắt đầu.", "#28a745");
         const btnMatch = document.getElementById("btn-match");
         if (btnMatch) btnMatch.disabled = false;
@@ -35,14 +39,24 @@ function connectWebSocket() {
         }
     };
 
+    socket.onerror = (error) => {
+        console.error("Lỗi WebSocket:", error);
+        socket.close();
+    };
+
     socket.onclose = () => {
-        updateStatus("Mất kết nối Server. Đang thử lại...", "#dc3545");
         const btnMatch = document.getElementById("btn-match");
-        if (btnMatch) btnMatch.disabled = false;
-        setTimeout(connectWebSocket, 3000);
+        if (btnMatch) btnMatch.disabled = true;
+        updateStatus("Mất kết nối Server. Đang thử lại...", "#dc3545");
+        if (!isReconnecting) {
+            isReconnecting = true;
+            setTimeout(() => {
+                isReconnecting = false;
+                connectWebSocket();
+            }, 3000);
+        }
     };
 }
-
 function handleServerEvent(data) {
     switch (data.type) {
         case 'MATCHED':
@@ -83,7 +97,6 @@ async function findMatch() {
         return;
     }
     
-    // Kiểm tra ban trước khi tìm
     if (currentUserId) {
         try {
             const res = await fetch(`/api/users/${currentUserId}/check-ban`);
