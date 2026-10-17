@@ -11,543 +11,548 @@ function getUserInfo() {
         location: document.getElementById("guest-location")?.value || "Không xác định",
         gender: document.getElementById("guest-gender")?.value || "khác"
     };
-}
-let socket = null;
-let isReconnecting = false;
-function connectWebSocket() {
-    if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
-        return;
-    }
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
+    let isReconnecting = false;
 
-    socket = new WebSocket(`${protocol}//${host}/chat`);
-
-    socket.onopen = () => {
-        isReconnecting = false;
-        updateStatus("Đã kết nối! Bấm 'Tìm Room' để bắt đầu.", "#28a745");
-        const btnMatch = document.getElementById("btn-match");
-        if (btnMatch) btnMatch.disabled = false;
-    };
-
-    socket.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            handleServerEvent(data);
-        } catch (err) {
-            console.error("Lỗi parse tin nhắn từ server:", err);
+    function connectWebSocket() {
+        if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
+            return;
         }
-    };
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
 
-    socket.onerror = (error) => {
-        console.error("Lỗi WebSocket:", error);
-        socket.close();
-    };
+        socket = new WebSocket(`${protocol}//${host}/chat`);
 
-    socket.onclose = () => {
-        const btnMatch = document.getElementById("btn-match");
-        if (btnMatch) btnMatch.disabled = true;
-        updateStatus("Mất kết nối Server. Đang thử lại...", "#dc3545");
-        if (!isReconnecting) {
-            isReconnecting = true;
-            setTimeout(() => {
-                isReconnecting = false;
-                connectWebSocket();
-            }, 3000);
-        }
-    };
-}
-function handleServerEvent(data) {
-    switch (data.type) {
-        case 'MATCHED':
-            showLoadingOverlay(false);
-            showModal(true);
-            updateStatus("Tìm thấy room! Đang chờ bạn xác nhận...", "#ffc107");
-
-            if (data.partnerInfo) {
-                displayPartnerInfo(data.partnerInfo);
-            }
-            break;
-
-        case 'CHAT':
-            if (data.msgType && data.msgType !== 'text') {
-                appendMediaMessage(data.message, data.msgType, "partner");
-            } else {
-                appendMessage(data.message, "partner");
-            }
-            break;
-
-        case 'PARTNER_LEFT':
-            isMatched = false;
-            updateStatus("Người lạ đã thoát. Hãy tìm người mới...", "#ffc107");
-            clearPartnerInfo();
-            clearChat();
-            toggleChatInput(false);
-            showFindRoomOverlay(true);
-            break;
-
-        default:
-            console.log("Sự kiện chưa xác định:", data);
-    }
-}
-
-async function findMatch() {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        alert("Chưa kết nối đến máy chủ. Vui lòng đợi trong giây lát!");
-        return;
-    }
-    
-    if (currentUserId) {
-        try {
-            const res = await fetch(`/api/users/${currentUserId}/check-ban`);
-            const isBanned = await res.json();
-            if (isBanned) {
-                alert("Tài khoản của bạn đã bị cấm chat!");
-                return;
-            }
-        } catch(e) {}
-    }
-
-    clearChat();
-
-    const userInfo = getUserInfo();
-
-    socket.send(JSON.stringify({
-        action: "FIND_MATCH",
-        userInfo: userInfo
-    }));
-
-    updateStatus("Đang tìm kiếm room ngẫu nhiên...", "#ffc107");
-    showLoadingOverlay(true);
-
-    const btnMatch = document.getElementById("btn-match");
-    const btnExit = document.getElementById("btn-exit");
-    if (btnMatch) btnMatch.disabled = true;
-    if (btnExit) btnExit.disabled = true;
-}
-
-function showLoadingOverlay(show) {
-    const overlay = document.getElementById("loading-overlay");
-    if (overlay) {
-        if (show) overlay.classList.remove("hidden");
-        else overlay.classList.add("hidden");
-    }
-}
-
-function cancelSearch() {
-    showLoadingOverlay(false);
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ action: "CANCEL_MATCH" }));
-    }
-    updateStatus("Đã hủy tìm kiếm.", "#6c757d");
-    const btnMatch = document.getElementById("btn-match");
-    if (btnMatch) btnMatch.disabled = false;
-}
-
-function acceptMatch() {
-    showModal(false);
-    isMatched = true;
-
-    socket.send(JSON.stringify({ action: "ACCEPT" }));
-
-    updateStatus("Đã kết nối! Chúc hai bạn trò chuyện vui vẻ.", "#007bff");
-    appendMessage("Cả hai đã đồng ý trò chuyện!", "system");
-    toggleChatInput(true);
-}
-
-function rejectMatch() {
-    showModal(false);
-    isMatched = false;
-    clearPartnerInfo();
-    clearChat();
-    socket.send(JSON.stringify({ action: "SKIP" }));
-    showFindRoomOverlay(true);
-}
-
-function exitAndFindNew() {
-    if (!socket || socket.readyState !== WebSocket.OPEN) return;
-    socket.send(JSON.stringify({ action: "SKIP" }));
-    isMatched = false;
-    clearPartnerInfo();
-    clearChat();
-    toggleChatInput(false);
-    showFindRoomOverlay(true);
-}
-
-function showFindRoomOverlay(show) {
-    const overlay = document.getElementById("find-room-overlay");
-    if (overlay) {
-        if (show) overlay.classList.remove("hidden");
-        else overlay.classList.add("hidden");
-    }
-}
-
-function closeFindRoomOverlay() {
-    showFindRoomOverlay(false);
-}
-
-function startFindMatch() {
-    showFindRoomOverlay(false);
-    findMatch();
-}
-
-function sendMessage() {
-    const input = document.getElementById("msg-input");
-    const msg = input.value.trim();
-    if (msg !== "" && isMatched) {
-        socket.send(JSON.stringify({ action: "SEND_MSG", message: msg, msgType: "text" }));
-        appendMessage(msg, "me");
-        input.value = "";
-    }
-}
-
-async function uploadAndSendFile(event) {
-    const file = event.target.files[0];
-    if (!file || !isMatched) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-    updateStatus("Đang tải file lên...", "#ffc107");
-
-    try {
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            socket.send(JSON.stringify({
-                action: "SEND_MSG",
-                message: data.url,
-                msgType: data.type
-            }));
-            appendMediaMessage(data.url, data.type, "me");
-            updateStatus("Đã kết nối! Chúc hai bạn trò chuyện vui vẻ.", "#007bff");
-        } else {
-            alert("Tải file thất bại!");
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Lỗi kết nối khi gửi file!");
-    } finally {
-        event.target.value = "";
-    }
-}
-
-function displayPartnerInfo(info) {
-    const avatarEl = document.getElementById("partner-avatar");
-    const nameEl = document.getElementById("partner-name");
-    const ageEl = document.getElementById("partner-age");
-    const locationEl = document.getElementById("partner-location");
-
-    const defaultAvatar = "https://via.placeholder.com/150";
-
-    if (avatarEl) avatarEl.src = info.avatar || defaultAvatar;
-    if (nameEl) nameEl.innerText = info.name || "Người lạ";
-    if (ageEl) ageEl.innerText = info.age ? `${info.age} tuổi` : "Chưa rõ tuổi";
-    if (locationEl) locationEl.innerText = info.location || "Không xác định";
-}
-
-function clearPartnerInfo() {
-    const avatarEl = document.getElementById("partner-avatar");
-    const nameEl = document.getElementById("partner-name");
-    const ageEl = document.getElementById("partner-age");
-    const locationEl = document.getElementById("partner-location");
-
-    if (avatarEl) avatarEl.src = "https://via.placeholder.com/150";
-    if (nameEl) nameEl.innerText = "";
-    if (ageEl) ageEl.innerText = "";
-    if (locationEl) locationEl.innerText = "";
-}
-
-function updateStatus(text, color) {
-    const statusBox = document.getElementById("status");
-    if (statusBox) {
-        statusBox.innerText = text;
-        statusBox.style.backgroundColor = color;
-        statusBox.style.color = "#fff";
-    }
-}
-
-function toggleChatInput(enable) {
-    const btnExit = document.getElementById("btn-exit");
-    const btnSend = document.getElementById("btn-send");
-    const btnMatch = document.getElementById("btn-match");
-    const msgInput = document.getElementById("msg-input");
-    const btnFile = document.getElementById("btn-file");
-    const menuExit = document.getElementById("menu-exit-room");
-
-    if (btnExit) btnExit.disabled = !enable;
-    if (btnSend) btnSend.disabled = !enable;
-    if (btnMatch) btnMatch.disabled = enable;
-    if (msgInput) msgInput.disabled = !enable;
-    if (btnFile) btnFile.disabled = !enable;
-    if (menuExit) menuExit.style.display = enable ? "flex" : "none";
-}
-
-function showModal(show) {
-    const modal = document.getElementById("match-modal");
-    if (modal) {
-        if (show) modal.classList.remove("hidden");
-        else modal.classList.add("hidden");
-    }
-}
-
-function appendMediaMessage(url, type, sender) {
-    const chatBox = document.getElementById("chat-box");
-    const msgDiv = document.createElement("div");
-    msgDiv.className = `message ${sender}`;
-
-    if (type === 'image') {
-        msgDiv.innerHTML = `<img src="${url}" alt="Hình ảnh" style="max-width:200px; border-radius:8px; cursor:pointer;" onclick="openImageModal('${url}')" />`;
-    } else if (type === 'video') {
-        msgDiv.innerHTML = `<video src="${url}" controls style="max-width:250px; border-radius:8px;"></video>`;
-    }
-
-    chatBox.appendChild(msgDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function appendMessage(msg, type) {
-    const chatBox = document.getElementById("chat-box");
-    const msgDiv = document.createElement("div");
-    msgDiv.className = `message ${type}`;
-    msgDiv.innerText = msg;
-    chatBox.appendChild(msgDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function clearChat() {
-    const chatBox = document.getElementById("chat-box");
-    if (chatBox) {
-        const messages = chatBox.querySelectorAll('.message');
-        messages.forEach(msg => msg.remove());
-    }
-}
-
-function handleKeyPress(e) {
-    if (e.key === 'Enter') sendMessage();
-}
-
-async function uploadAvatarPreview(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            const avatarInput = document.getElementById("guest-avatar");
-            if (avatarInput) avatarInput.value = data.url;
-            const previewEl = document.getElementById("guest-avatar-preview");
-            if (previewEl) previewEl.src = data.url;
-        } else {
-            alert("Tải ảnh thất bại!");
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Lỗi tải ảnh!");
-    } finally {
-        event.target.value = "";
-    }
-}
-
-function updateUserProfileDisplay(profile) {
-    const avatarEl = document.getElementById("my-avatar-display");
-    const nameEl = document.getElementById("my-name-display");
-    if (avatarEl) {
-        avatarEl.src = profile.avatar || "https://via.placeholder.com/150";
-    }
-    if (nameEl) {
-        nameEl.innerText = profile.name || "Người lạ";
-    }
-}
-
-function openProfileModal() {
-    const modal = document.getElementById("guest-modal");
-    if (modal) {
-        modal.classList.remove("hidden");
-        const title = modal.querySelector("h3");
-        if (title) title.innerText = "Hồ sơ của bạn";
-        const btn = modal.querySelector(".btn-accept");
-        if (btn) btn.innerText = "Lưu thông tin";
-    }
-}
-
-async function saveGuestProfile() {
-    const modal = document.getElementById("guest-modal");
-    if (modal) {
-        modal.classList.add("hidden");
-    }
-
-    const profile = {
-        name: document.getElementById("guest-name")?.value.trim() || "",
-        age: document.getElementById("guest-age")?.value || "",
-        gender: document.getElementById("guest-gender")?.value || "khac",
-        location: document.getElementById("guest-location")?.value || "",
-        avatar: document.getElementById("guest-avatar")?.value || ""
-    };
-    
-    // Nếu đã có ID thì gửi kèm để update
-    if (currentUserId) {
-        profile.id = currentUserId;
-    }
-
-    try {
-        const response = await fetch('/api/users/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(profile)
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            // Server trả về ID chuẩn, lưu lại vào biến và localStorage
-            currentUserId = data.id.toString();
-            localStorage.setItem("chatUserId", currentUserId);
-            
-            // Nếu bị ban
-            if (data.banned) {
-                alert("Tài khoản của bạn đã bị cấm chat!");
-                // Có thể disable nút tìm kiếm ở đây
-            }
-        }
-    } catch (e) {
-        console.error("Lỗi đăng ký user:", e);
-    }
-
-    localStorage.setItem("chatProfile", JSON.stringify(profile));
-    updateUserProfileDisplay(profile);
-}
-
-function loadProvinces() {
-    const locationSelect = document.getElementById("guest-location");
-    if (!locationSelect) return;
-
-    fetch("https://provinces.open-api.vn/api/p/")
-        .then(response => response.json())
-        .then(data => {
-            data.forEach(province => {
-                const option = document.createElement("option");
-                option.value = province.name;
-                option.textContent = province.name;
-                locationSelect.appendChild(option);
-            });
-
-            try {
-                const savedProfile = localStorage.getItem("chatProfile");
-                if (savedProfile) {
-                    const profile = JSON.parse(savedProfile);
-                    if (profile.location) locationSelect.value = profile.location;
-                }
-            } catch (e) { }
-        })
-        .catch(error => {
-            console.error("Lỗi khi load danh sách Tỉnh/Thành:", error);
-        });
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-    // Đăng ký tự động nếu chưa có ID
-    if (!currentUserId) {
-        saveGuestProfile(); // Sẽ gọi API để lấy ID mới
-    } else {
-        const userIdEl = document.getElementById('user-id');
-        if (userIdEl) userIdEl.innerText = currentUserId;
-    }
-
-    try {
-        const savedProfile = localStorage.getItem("chatProfile");
-        if (savedProfile) {
-            const profile = JSON.parse(savedProfile);
-            if (profile.name) document.getElementById("guest-name").value = profile.name;
-            if (profile.age) document.getElementById("guest-age").value = profile.age;
-            if (profile.gender) document.getElementById("guest-gender").value = profile.gender;
-            if (profile.avatar) {
-                const avatarInput = document.getElementById("guest-avatar");
-                if (avatarInput) avatarInput.value = profile.avatar;
-                const previewEl = document.getElementById("guest-avatar-preview");
-                if (previewEl) previewEl.src = profile.avatar;
-            }
-            updateUserProfileDisplay(profile);
-            
-            // Cập nhật lại thông tin mới nhất lên Server
-            saveGuestProfile();
-        }
-    } catch (e) { }
-
-    const guestAvatarInput = document.getElementById("guest-avatar");
-    if (guestAvatarInput) {
-        guestAvatarInput.addEventListener("input", function(e) {
-            const preview = document.getElementById("guest-avatar-preview");
-            if (preview) {
-                preview.src = e.target.value || "https://via.placeholder.com/150";
-            }
-        });
-    }
-
-    loadProvinces();
-    connectWebSocket();
-});
-
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar-menu');
-    const overlay = document.getElementById('sidebar-overlay');
-    if (sidebar) sidebar.classList.toggle('active');
-    if (overlay) overlay.classList.toggle('active');
-}
-
-function openImageModal(url) {
-    let modal = document.getElementById('image-preview-modal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'image-preview-modal';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100vw';
-        modal.style.height = '100vh';
-        modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
-        modal.style.display = 'flex';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
-        modal.style.zIndex = '9999';
-        modal.style.cursor = 'zoom-out';
-        modal.onclick = function() {
-            modal.style.display = 'none';
+        socket.onopen = () => {
+            isReconnecting = false;
+            updateStatus("Đã kết nối! Bấm 'Tìm Room' để bắt đầu.", "#28a745");
+            const btnMatch = document.getElementById("btn-match");
+            if (btnMatch) btnMatch.disabled = false;
         };
 
-        const img = document.createElement('img');
-        img.id = 'image-preview-content';
-        img.style.maxWidth = '90%';
-        img.style.maxHeight = '90%';
-        img.style.borderRadius = '8px';
-        img.style.boxShadow = '0 8px 16px rgba(0,0,0,0.5)';
-        img.style.objectFit = 'contain';
-        
-        const closeBtn = document.createElement('span');
-        closeBtn.innerHTML = '&times;';
-        closeBtn.style.position = 'absolute';
-        closeBtn.style.top = '20px';
-        closeBtn.style.right = '40px';
-        closeBtn.style.color = '#fff';
-        closeBtn.style.fontSize = '50px';
-        closeBtn.style.fontWeight = 'bold';
-        closeBtn.style.cursor = 'pointer';
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                handleServerEvent(data);
+            } catch (err) {
+                console.error("Lỗi parse tin nhắn từ server:", err);
+            }
+        };
 
-        modal.appendChild(closeBtn);
-        modal.appendChild(img);
-        document.body.appendChild(modal);
+        socket.onerror = (error) => {
+            console.error("Lỗi WebSocket:", error);
+            socket.close();
+        };
+
+        socket.onclose = () => {
+            const btnMatch = document.getElementById("btn-match");
+            if (btnMatch) btnMatch.disabled = true;
+            updateStatus("Mất kết nối Server. Đang thử lại...", "#dc3545");
+            if (!isReconnecting) {
+                isReconnecting = true;
+                setTimeout(() => {
+                    isReconnecting = false;
+                    connectWebSocket();
+                }, 3000);
+            }
+        };
     }
-    
-    document.getElementById('image-preview-content').src = url;
-    modal.style.display = 'flex';
+
+    function handleServerEvent(data) {
+        switch (data.type) {
+            case 'MATCHED':
+                showLoadingOverlay(false);
+                showModal(true);
+                updateStatus("Tìm thấy room! Đang chờ bạn xác nhận...", "#ffc107");
+
+                if (data.partnerInfo) {
+                    displayPartnerInfo(data.partnerInfo);
+                }
+                break;
+
+            case 'CHAT':
+                if (data.msgType && data.msgType !== 'text') {
+                    appendMediaMessage(data.message, data.msgType, "partner");
+                } else {
+                    appendMessage(data.message, "partner");
+                }
+                break;
+
+            case 'PARTNER_LEFT':
+                isMatched = false;
+                updateStatus("Người lạ đã thoát. Hãy tìm người mới...", "#ffc107");
+                clearPartnerInfo();
+                clearChat();
+                toggleChatInput(false);
+                showFindRoomOverlay(true);
+                break;
+
+            default:
+                console.log("Sự kiện chưa xác định:", data);
+        }
+    }
+
+    async function findMatch() {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            alert("Chưa kết nối đến máy chủ. Vui lòng đợi trong giây lát!");
+            return;
+        }
+
+        if (currentUserId) {
+            try {
+                const res = await fetch(`/api/users/${currentUserId}/check-ban`);
+                const isBanned = await res.json();
+                if (isBanned) {
+                    alert("Tài khoản của bạn đã bị cấm chat!");
+                    return;
+                }
+            } catch (e) {
+            }
+        }
+
+        clearChat();
+
+        const userInfo = getUserInfo();
+
+        socket.send(JSON.stringify({
+            action: "FIND_MATCH",
+            userInfo: userInfo
+        }));
+
+        updateStatus("Đang tìm kiếm room ngẫu nhiên...", "#ffc107");
+        showLoadingOverlay(true);
+
+        const btnMatch = document.getElementById("btn-match");
+        const btnExit = document.getElementById("btn-exit");
+        if (btnMatch) btnMatch.disabled = true;
+        if (btnExit) btnExit.disabled = true;
+    }
+
+    function showLoadingOverlay(show) {
+        const overlay = document.getElementById("loading-overlay");
+        if (overlay) {
+            if (show) overlay.classList.remove("hidden");
+            else overlay.classList.add("hidden");
+        }
+    }
+
+    function cancelSearch() {
+        showLoadingOverlay(false);
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({action: "CANCEL_MATCH"}));
+        }
+        updateStatus("Đã hủy tìm kiếm.", "#6c757d");
+        const btnMatch = document.getElementById("btn-match");
+        if (btnMatch) btnMatch.disabled = false;
+    }
+
+    function acceptMatch() {
+        showModal(false);
+        isMatched = true;
+
+        socket.send(JSON.stringify({action: "ACCEPT"}));
+
+        updateStatus("Đã kết nối! Chúc hai bạn trò chuyện vui vẻ.", "#007bff");
+        appendMessage("Cả hai đã đồng ý trò chuyện!", "system");
+        toggleChatInput(true);
+    }
+
+    function rejectMatch() {
+        showModal(false);
+        isMatched = false;
+        clearPartnerInfo();
+        clearChat();
+        socket.send(JSON.stringify({action: "SKIP"}));
+        showFindRoomOverlay(true);
+    }
+
+    function exitAndFindNew() {
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+        socket.send(JSON.stringify({action: "SKIP"}));
+        isMatched = false;
+        clearPartnerInfo();
+        clearChat();
+        toggleChatInput(false);
+        showFindRoomOverlay(true);
+    }
+
+    function showFindRoomOverlay(show) {
+        const overlay = document.getElementById("find-room-overlay");
+        if (overlay) {
+            if (show) overlay.classList.remove("hidden");
+            else overlay.classList.add("hidden");
+        }
+    }
+
+    function closeFindRoomOverlay() {
+        showFindRoomOverlay(false);
+    }
+
+    function startFindMatch() {
+        showFindRoomOverlay(false);
+        findMatch();
+    }
+
+    function sendMessage() {
+        const input = document.getElementById("msg-input");
+        const msg = input.value.trim();
+        if (msg !== "" && isMatched) {
+            socket.send(JSON.stringify({action: "SEND_MSG", message: msg, msgType: "text"}));
+            appendMessage(msg, "me");
+            input.value = "";
+        }
+    }
+
+    async function uploadAndSendFile(event) {
+        const file = event.target.files[0];
+        if (!file || !isMatched) return;
+
+        const formData = new FormData();
+        formData.append("file", file);
+        updateStatus("Đang tải file lên...", "#ffc107");
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                socket.send(JSON.stringify({
+                    action: "SEND_MSG",
+                    message: data.url,
+                    msgType: data.type
+                }));
+                appendMediaMessage(data.url, data.type, "me");
+                updateStatus("Đã kết nối! Chúc hai bạn trò chuyện vui vẻ.", "#007bff");
+            } else {
+                alert("Tải file thất bại!");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Lỗi kết nối khi gửi file!");
+        } finally {
+            event.target.value = "";
+        }
+    }
+
+    function displayPartnerInfo(info) {
+        const avatarEl = document.getElementById("partner-avatar");
+        const nameEl = document.getElementById("partner-name");
+        const ageEl = document.getElementById("partner-age");
+        const locationEl = document.getElementById("partner-location");
+
+        const defaultAvatar = "https://via.placeholder.com/150";
+
+        if (avatarEl) avatarEl.src = info.avatar || defaultAvatar;
+        if (nameEl) nameEl.innerText = info.name || "Người lạ";
+        if (ageEl) ageEl.innerText = info.age ? `${info.age} tuổi` : "Chưa rõ tuổi";
+        if (locationEl) locationEl.innerText = info.location || "Không xác định";
+    }
+
+    function clearPartnerInfo() {
+        const avatarEl = document.getElementById("partner-avatar");
+        const nameEl = document.getElementById("partner-name");
+        const ageEl = document.getElementById("partner-age");
+        const locationEl = document.getElementById("partner-location");
+
+        if (avatarEl) avatarEl.src = "https://via.placeholder.com/150";
+        if (nameEl) nameEl.innerText = "";
+        if (ageEl) ageEl.innerText = "";
+        if (locationEl) locationEl.innerText = "";
+    }
+
+    function updateStatus(text, color) {
+        const statusBox = document.getElementById("status");
+        if (statusBox) {
+            statusBox.innerText = text;
+            statusBox.style.backgroundColor = color;
+            statusBox.style.color = "#fff";
+        }
+    }
+
+    function toggleChatInput(enable) {
+        const btnExit = document.getElementById("btn-exit");
+        const btnSend = document.getElementById("btn-send");
+        const btnMatch = document.getElementById("btn-match");
+        const msgInput = document.getElementById("msg-input");
+        const btnFile = document.getElementById("btn-file");
+        const menuExit = document.getElementById("menu-exit-room");
+
+        if (btnExit) btnExit.disabled = !enable;
+        if (btnSend) btnSend.disabled = !enable;
+        if (btnMatch) btnMatch.disabled = enable;
+        if (msgInput) msgInput.disabled = !enable;
+        if (btnFile) btnFile.disabled = !enable;
+        if (menuExit) menuExit.style.display = enable ? "flex" : "none";
+    }
+
+    function showModal(show) {
+        const modal = document.getElementById("match-modal");
+        if (modal) {
+            if (show) modal.classList.remove("hidden");
+            else modal.classList.add("hidden");
+        }
+    }
+
+    function appendMediaMessage(url, type, sender) {
+        const chatBox = document.getElementById("chat-box");
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `message ${sender}`;
+
+        if (type === 'image') {
+            msgDiv.innerHTML = `<img src="${url}" alt="Hình ảnh" style="max-width:200px; border-radius:8px; cursor:pointer;" onclick="openImageModal('${url}')" />`;
+        } else if (type === 'video') {
+            msgDiv.innerHTML = `<video src="${url}" controls style="max-width:250px; border-radius:8px;"></video>`;
+        }
+
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function appendMessage(msg, type) {
+        const chatBox = document.getElementById("chat-box");
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `message ${type}`;
+        msgDiv.innerText = msg;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function clearChat() {
+        const chatBox = document.getElementById("chat-box");
+        if (chatBox) {
+            const messages = chatBox.querySelectorAll('.message');
+            messages.forEach(msg => msg.remove());
+        }
+    }
+
+    function handleKeyPress(e) {
+        if (e.key === 'Enter') sendMessage();
+    }
+
+    async function uploadAvatarPreview(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const avatarInput = document.getElementById("guest-avatar");
+                if (avatarInput) avatarInput.value = data.url;
+                const previewEl = document.getElementById("guest-avatar-preview");
+                if (previewEl) previewEl.src = data.url;
+            } else {
+                alert("Tải ảnh thất bại!");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Lỗi tải ảnh!");
+        } finally {
+            event.target.value = "";
+        }
+    }
+
+    function updateUserProfileDisplay(profile) {
+        const avatarEl = document.getElementById("my-avatar-display");
+        const nameEl = document.getElementById("my-name-display");
+        if (avatarEl) {
+            avatarEl.src = profile.avatar || "https://via.placeholder.com/150";
+        }
+        if (nameEl) {
+            nameEl.innerText = profile.name || "Người lạ";
+        }
+    }
+
+    function openProfileModal() {
+        const modal = document.getElementById("guest-modal");
+        if (modal) {
+            modal.classList.remove("hidden");
+            const title = modal.querySelector("h3");
+            if (title) title.innerText = "Hồ sơ của bạn";
+            const btn = modal.querySelector(".btn-accept");
+            if (btn) btn.innerText = "Lưu thông tin";
+        }
+    }
+
+    async function saveGuestProfile() {
+        const modal = document.getElementById("guest-modal");
+        if (modal) {
+            modal.classList.add("hidden");
+        }
+
+        const profile = {
+            name: document.getElementById("guest-name")?.value.trim() || "",
+            age: document.getElementById("guest-age")?.value || "",
+            gender: document.getElementById("guest-gender")?.value || "khac",
+            location: document.getElementById("guest-location")?.value || "",
+            avatar: document.getElementById("guest-avatar")?.value || ""
+        };
+
+        // Nếu đã có ID thì gửi kèm để update
+        if (currentUserId) {
+            profile.id = currentUserId;
+        }
+
+        try {
+            const response = await fetch('/api/users/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(profile)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // Server trả về ID chuẩn, lưu lại vào biến và localStorage
+                currentUserId = data.id.toString();
+                localStorage.setItem("chatUserId", currentUserId);
+
+                // Nếu bị ban
+                if (data.banned) {
+                    alert("Tài khoản của bạn đã bị cấm chat!");
+                    // Có thể disable nút tìm kiếm ở đây
+                }
+            }
+        } catch (e) {
+            console.error("Lỗi đăng ký user:", e);
+        }
+
+        localStorage.setItem("chatProfile", JSON.stringify(profile));
+        updateUserProfileDisplay(profile);
+    }
+
+    function loadProvinces() {
+        const locationSelect = document.getElementById("guest-location");
+        if (!locationSelect) return;
+
+        fetch("https://provinces.open-api.vn/api/p/")
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(province => {
+                    const option = document.createElement("option");
+                    option.value = province.name;
+                    option.textContent = province.name;
+                    locationSelect.appendChild(option);
+                });
+
+                try {
+                    const savedProfile = localStorage.getItem("chatProfile");
+                    if (savedProfile) {
+                        const profile = JSON.parse(savedProfile);
+                        if (profile.location) locationSelect.value = profile.location;
+                    }
+                } catch (e) {
+                }
+            })
+            .catch(error => {
+                console.error("Lỗi khi load danh sách Tỉnh/Thành:", error);
+            });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Đăng ký tự động nếu chưa có ID
+        if (!currentUserId) {
+            saveGuestProfile(); // Sẽ gọi API để lấy ID mới
+        } else {
+            const userIdEl = document.getElementById('user-id');
+            if (userIdEl) userIdEl.innerText = currentUserId;
+        }
+
+        try {
+            const savedProfile = localStorage.getItem("chatProfile");
+            if (savedProfile) {
+                const profile = JSON.parse(savedProfile);
+                if (profile.name) document.getElementById("guest-name").value = profile.name;
+                if (profile.age) document.getElementById("guest-age").value = profile.age;
+                if (profile.gender) document.getElementById("guest-gender").value = profile.gender;
+                if (profile.avatar) {
+                    const avatarInput = document.getElementById("guest-avatar");
+                    if (avatarInput) avatarInput.value = profile.avatar;
+                    const previewEl = document.getElementById("guest-avatar-preview");
+                    if (previewEl) previewEl.src = profile.avatar;
+                }
+                updateUserProfileDisplay(profile);
+
+                // Cập nhật lại thông tin mới nhất lên Server
+                saveGuestProfile();
+            }
+        } catch (e) {
+        }
+
+        const guestAvatarInput = document.getElementById("guest-avatar");
+        if (guestAvatarInput) {
+            guestAvatarInput.addEventListener("input", function (e) {
+                const preview = document.getElementById("guest-avatar-preview");
+                if (preview) {
+                    preview.src = e.target.value || "https://via.placeholder.com/150";
+                }
+            });
+        }
+
+        loadProvinces();
+        connectWebSocket();
+    });
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar-menu');
+        const overlay = document.getElementById('sidebar-overlay');
+        if (sidebar) sidebar.classList.toggle('active');
+        if (overlay) overlay.classList.toggle('active');
+    }
+
+    function openImageModal(url) {
+        let modal = document.getElementById('image-preview-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'image-preview-modal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '9999';
+            modal.style.cursor = 'zoom-out';
+            modal.onclick = function () {
+                modal.style.display = 'none';
+            };
+
+            const img = document.createElement('img');
+            img.id = 'image-preview-content';
+            img.style.maxWidth = '90%';
+            img.style.maxHeight = '90%';
+            img.style.borderRadius = '8px';
+            img.style.boxShadow = '0 8px 16px rgba(0,0,0,0.5)';
+            img.style.objectFit = 'contain';
+
+            const closeBtn = document.createElement('span');
+            closeBtn.innerHTML = '&times;';
+            closeBtn.style.position = 'absolute';
+            closeBtn.style.top = '20px';
+            closeBtn.style.right = '40px';
+            closeBtn.style.color = '#fff';
+            closeBtn.style.fontSize = '50px';
+            closeBtn.style.fontWeight = 'bold';
+            closeBtn.style.cursor = 'pointer';
+
+            modal.appendChild(closeBtn);
+            modal.appendChild(img);
+            document.body.appendChild(modal);
+        }
+
+        document.getElementById('image-preview-content').src = url;
+        modal.style.display = 'flex';
+    }
+
 }
