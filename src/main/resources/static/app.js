@@ -1,7 +1,8 @@
-let socket = null;
-let isMatched = false;
-let isReconnecting = false;
-let currentUserId = localStorage.getItem('chatUserId');
+// Quản lý nhiều phòng (Tối đa 5 phòng)
+const MAX_ROOMS = 5;
+let rooms = {}; // roomId -> { partnerInfo, messages: [], unreadCount: 0 }
+let activeRoomId = null;
+let pendingMatchData = null; // Dữ liệu phòng đang chờ xác nhận (match-modal)
 
 function getUserInfo() {
     return {
@@ -14,52 +15,6 @@ function getUserInfo() {
     };
 }
 
-/*function connectWebSocket() {
-        if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
-            return;
-        }
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-
-        socket = new WebSocket(`${protocol}//${host}/chat`);
-
-        socket.onopen = () => {
-            isReconnecting = false;
-            updateStatus("Đã kết nối! Bấm 'Tìm Room' để bắt đầu.", "#28a745");
-            const btnMatch = document.getElementById("btn-match");
-            if (btnMatch) btnMatch.disabled = false;
-        };
-
-        socket.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                handleServerEvent(data);
-            } catch (err) {
-                console.error("Lỗi parse tin nhắn từ server:", err);
-            }
-        };
-
-        socket.onerror = (error) => {
-            console.error("Lỗi WebSocket:", error);
-            socket.close();
-        };
-
-        socket.onclose = () => {
-            const btnMatch = document.getElementById("btn-match");
-            if (btnMatch) btnMatch.disabled = true;
-            updateStatus("Mất kết nối Server. Đang thử lại...", "#dc3545");
-            if (!isReconnecting) {
-                isReconnecting = true;
-                setTimeout(() => {
-                    isReconnecting = false;
-                    connectWebSocket();
-                }, 3000);
-            }
-        };
-    }*/
-
-let socket = null;
-let isReconnecting = false;
 let reconnectTimer = null;
 
 function connectWebSocket() {
@@ -74,7 +29,6 @@ function connectWebSocket() {
     const protocol =
         window.location.protocol === "https:" ? "wss:" : "ws:";
 
-    // Nếu backend chạy cổng khác, cần sửa địa chỉ này.
     const url = `${protocol}//${window.location.host}/chat`;
 
     console.log("Đang kết nối WebSocket:", url);
@@ -93,13 +47,10 @@ function connectWebSocket() {
         isReconnecting = false;
         clearTimeout(reconnectTimer);
 
-        updateStatus(
-            "Đã kết nối! Bấm 'Tìm Room' để bắt đầu.",
-            "#28a745"
-        );
-
-        const btnMatch = document.getElementById("btn-match");
-        if (btnMatch) btnMatch.disabled = false;
+        if (Object.keys(rooms).length === 0) {
+            updateStatus("Đã kết nối! Bấm 'Tìm Room' để bắt đầu.", "#28a745");
+        }
+        updateControlsState();
     };
 
     socket.onmessage = (event) => {
@@ -123,14 +74,11 @@ function connectWebSocket() {
             event.reason || "(không có)"
         );
 
-        const btnMatch = document.getElementById("btn-match");
-        if (btnMatch) btnMatch.disabled = true;
-
         updateStatus(
             "Mất kết nối Server. Đang thử lại...",
             "#dc3545"
         );
-
+        updateControlsState();
         scheduleReconnect();
     };
 }
@@ -146,236 +94,441 @@ function scheduleReconnect() {
     }, 3000);
 }
 
-
-    function handleServerEvent(data) {
-        switch (data.type) {
-            case 'MATCHED':
-                showLoadingOverlay(false);
-                showModal(true);
-                updateStatus("Tìm thấy room! Đang chờ bạn xác nhận...", "#ffc107");
-
-                if (data.partnerInfo) {
-                    displayPartnerInfo(data.partnerInfo);
+function handleServerEvent(data) {
+    switch (data.type) {
+        case 'MATCHED':
+            showLoadingOverlay(false);
+            pendingMatchData = data;
+            showModal(true);
+            updateStatus("Tìm thấy room mới! Đang chờ bạn xác nhận...", "#ffc107");
+            if (data.partnerInfo) {
+                // Tạm thời hiển thị thông tin bạn mới lên modal xem trước nếu muốn
+                const modalDesc = document.querySelector("#match-modal p");
+                if (modalDesc) {
+                    const name = data.partnerInfo.name || "Người lạ";
+                    const age = data.partnerInfo.age ? `${data.partnerInfo.age}t` : "";
+                    const loc = data.partnerInfo.location || "";
+                    modalDesc.innerText = `Tìm thấy: ${name} ${age ? '(' + age + ')' : ''} ${loc ? 'ở ' + loc : ''}. Bạn có muốn trò chuyện?`;
                 }
-                break;
-
-            case 'CHAT':
-                if (data.msgType && data.msgType !== 'text') {
-                    appendMediaMessage(data.message, data.msgType, "partner");
-                } else {
-                    appendMessage(data.message, "partner");
-                }
-                break;
-
-            case 'PARTNER_LEFT':
-                isMatched = false;
-                updateStatus("Người lạ đã thoát. Hãy tìm người mới...", "#ffc107");
-                clearPartnerInfo();
-                clearChat();
-                toggleChatInput(false);
-                showFindRoomOverlay(true);
-                break;
-
-            default:
-                console.log("Sự kiện chưa xác định:", data);
-        }
-    }
-
-    async function findMatch() {
-        if (!socket || socket.readyState !== WebSocket.OPEN) {
-            alert("Chưa kết nối đến máy chủ. Vui lòng đợi trong giây lát!");
-            return;
-        }
-
-        if (currentUserId) {
-            try {
-                const res = await fetch(`/api/users/${currentUserId}/check-ban`);
-                const isBanned = await res.json();
-                if (isBanned) {
-                    alert("Tài khoản của bạn đã bị cấm chat!");
-                    return;
-                }
-            } catch (e) {
             }
+            break;
+
+        case 'CHAT':
+            onRoomMessageReceived(data.roomId, data.message, data.msgType || "text", "partner");
+            break;
+
+        case 'PARTNER_LEFT':
+            onPartnerLeft(data.roomId);
+            break;
+
+        case 'ERROR':
+            showLoadingOverlay(false);
+            alert(data.message || "Đã xảy ra lỗi!");
+            updateControlsState();
+            break;
+
+        default:
+            console.log("Sự kiện chưa xác định:", data);
+    }
+}
+
+async function findMatch() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        alert("Chưa kết nối đến máy chủ. Vui lòng đợi trong giây lát!");
+        return;
+    }
+
+    if (Object.keys(rooms).length >= MAX_ROOMS) {
+        alert(`Bạn chỉ có thể trò chuyện tối đa ${MAX_ROOMS} phòng cùng lúc! Hãy đóng bớt 1 phòng để tìm phòng mới.`);
+        return;
+    }
+
+    if (currentUserId) {
+        try {
+            const res = await fetch(`/api/users/${currentUserId}/check-ban`);
+            const isBanned = await res.json();
+            if (isBanned) {
+                alert("Tài khoản của bạn đã bị cấm chat!");
+                return;
+            }
+        } catch (e) {
         }
+    }
 
-        clearChat();
+    const userInfo = getUserInfo();
 
-        const userInfo = getUserInfo();
+    socket.send(JSON.stringify({
+        action: "FIND_MATCH",
+        userInfo: userInfo
+    }));
 
+    updateStatus(`Đang tìm kiếm bạn chat ngẫu nhiên... (${Object.keys(rooms).length}/${MAX_ROOMS} phòng)`, "#ffc107");
+    showLoadingOverlay(true);
+    updateControlsState();
+}
+
+function showLoadingOverlay(show) {
+    const overlay = document.getElementById("loading-overlay");
+    if (overlay) {
+        if (show) overlay.classList.remove("hidden");
+        else overlay.classList.add("hidden");
+    }
+}
+
+function cancelSearch() {
+    showLoadingOverlay(false);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({action: "CANCEL_MATCH"}));
+    }
+    updateStatus("Đã hủy tìm kiếm.", "#6c757d");
+    updateControlsState();
+}
+
+function acceptMatch() {
+    showModal(false);
+    if (!pendingMatchData) return;
+
+    const roomId = pendingMatchData.roomId;
+    const partnerInfo = pendingMatchData.partnerInfo || {};
+
+    rooms[roomId] = {
+        partnerInfo: partnerInfo,
+        messages: [
+            { kind: "system", text: "Cả hai đã đồng ý trò chuyện!" }
+        ],
+        unreadCount: 0
+    };
+
+    pendingMatchData = null;
+
+    // Chuyển sang phòng vừa tạo
+    switchRoom(roomId);
+    renderRoomTabs();
+    updateStatus("Đã kết nối phòng mới! Chúc hai bạn trò chuyện vui vẻ.", "#007bff");
+    updateControlsState();
+}
+
+function rejectMatch() {
+    showModal(false);
+    if (pendingMatchData) {
         socket.send(JSON.stringify({
-            action: "FIND_MATCH",
-            userInfo: userInfo
+            action: "SKIP",
+            roomId: pendingMatchData.roomId
         }));
+        pendingMatchData = null;
+    }
+    updateStatus("Đã từ chối ghép đôi.", "#6c757d");
+    updateControlsState();
+}
 
-        updateStatus("Đang tìm kiếm room ngẫu nhiên...", "#ffc107");
-        showLoadingOverlay(true);
+function exitAndFindNew() {
+    if (!activeRoomId) return;
+    leaveSpecificRoom(activeRoomId);
+}
 
-        const btnMatch = document.getElementById("btn-match");
-        const btnExit = document.getElementById("btn-exit");
-        if (btnMatch) btnMatch.disabled = true;
-        if (btnExit) btnExit.disabled = true;
+function leaveSpecificRoom(roomId) {
+    if (!rooms[roomId]) return;
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+            action: "LEAVE_ROOM",
+            roomId: roomId
+        }));
     }
 
-    function showLoadingOverlay(show) {
-        const overlay = document.getElementById("loading-overlay");
-        if (overlay) {
-            if (show) overlay.classList.remove("hidden");
-            else overlay.classList.add("hidden");
-        }
-    }
+    delete rooms[roomId];
 
-    function cancelSearch() {
-        showLoadingOverlay(false);
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({action: "CANCEL_MATCH"}));
-        }
-        updateStatus("Đã hủy tìm kiếm.", "#6c757d");
-        const btnMatch = document.getElementById("btn-match");
-        if (btnMatch) btnMatch.disabled = false;
-    }
-
-    function acceptMatch() {
-        showModal(false);
-        isMatched = true;
-
-        socket.send(JSON.stringify({action: "ACCEPT"}));
-
-        updateStatus("Đã kết nối! Chúc hai bạn trò chuyện vui vẻ.", "#007bff");
-        appendMessage("Cả hai đã đồng ý trò chuyện!", "system");
-        toggleChatInput(true);
-    }
-
-    function rejectMatch() {
-        showModal(false);
-        isMatched = false;
-        clearPartnerInfo();
-        clearChat();
-        socket.send(JSON.stringify({action: "SKIP"}));
-        showFindRoomOverlay(true);
-    }
-
-    function exitAndFindNew() {
-        if (!socket || socket.readyState !== WebSocket.OPEN) return;
-        socket.send(JSON.stringify({action: "SKIP"}));
-        isMatched = false;
+    const remainingRoomIds = Object.keys(rooms);
+    if (remainingRoomIds.length > 0) {
+        switchRoom(remainingRoomIds[remainingRoomIds.length - 1]);
+    } else {
+        activeRoomId = null;
         clearPartnerInfo();
         clearChat();
         toggleChatInput(false);
+        renderRoomTabs();
+        updateStatus("Đã thoát toàn bộ phòng. Bấm 'Tìm Room' để tìm bạn mới.", "#6c757d");
         showFindRoomOverlay(true);
     }
+    renderRoomTabs();
+    updateControlsState();
+}
 
-    function showFindRoomOverlay(show) {
-        const overlay = document.getElementById("find-room-overlay");
-        if (overlay) {
-            if (show) overlay.classList.remove("hidden");
-            else overlay.classList.add("hidden");
+function onPartnerLeft(roomId) {
+    if (rooms[roomId]) {
+        rooms[roomId].messages.push({
+            kind: "system",
+            text: "Người lạ đã rời khỏi phòng chat này."
+        });
+
+        if (activeRoomId === roomId) {
+            appendMessage("Người lạ đã rời khỏi cuộc trò chuyện.", "system");
+            updateStatus("Người lạ đã thoát khỏi phòng này.", "#dc3545");
+        } else {
+            rooms[roomId].unreadCount = (rooms[roomId].unreadCount || 0) + 1;
         }
+        renderRoomTabs();
+    }
+}
+
+function switchRoom(roomId) {
+    if (!rooms[roomId]) return;
+    activeRoomId = roomId;
+    rooms[roomId].unreadCount = 0; // Đã xem hết tin
+
+    displayPartnerInfo(rooms[roomId].partnerInfo);
+    renderChatBoxForActiveRoom();
+    renderRoomTabs();
+    toggleChatInput(true);
+
+    const activeRoomTag = document.getElementById("active-room-tag");
+    const indicator = document.getElementById("room-badge-indicator");
+    if (indicator && activeRoomTag) {
+        indicator.style.display = "block";
+        const roomIndex = Object.keys(rooms).indexOf(roomId) + 1;
+        activeRoomTag.innerText = `Phòng ${roomIndex}`;
     }
 
-    function closeFindRoomOverlay() {
-        showFindRoomOverlay(false);
-    }
+    updateStatus(`Đang ở phòng với ${rooms[roomId].partnerInfo.name || "Người lạ"}`, "#007bff");
+    updateControlsState();
+}
 
-    function startFindMatch() {
-        showFindRoomOverlay(false);
-        findMatch();
-    }
+function renderRoomTabs() {
+    const list = document.getElementById("room-tabs-list");
+    if (!list) return;
 
-    function sendMessage() {
-        const input = document.getElementById("msg-input");
-        const msg = input.value.trim();
-        if (msg !== "" && isMatched) {
-            socket.send(JSON.stringify({action: "SEND_MSG", message: msg, msgType: "text"}));
-            appendMessage(msg, "me");
-            input.value = "";
+    list.innerHTML = "";
+    const roomIds = Object.keys(rooms);
+
+    roomIds.forEach((rId, idx) => {
+        const room = rooms[rId];
+        const tab = document.createElement("div");
+        tab.className = `room-tab ${rId === activeRoomId ? 'active' : ''}`;
+        tab.onclick = () => switchRoom(rId);
+
+        const avatarImg = document.createElement("img");
+        avatarImg.className = "room-tab-avatar";
+        avatarImg.src = room.partnerInfo.avatar || "https://via.placeholder.com/150";
+
+        const titleSpan = document.createElement("span");
+        titleSpan.className = "room-tab-title";
+        titleSpan.innerText = room.partnerInfo.name ? `${idx + 1}. ${room.partnerInfo.name}` : `Room ${idx + 1}`;
+
+        tab.appendChild(avatarImg);
+        tab.appendChild(titleSpan);
+
+        // Huy hiệu thông báo tin nhắn chưa đọc
+        if (room.unreadCount && room.unreadCount > 0 && rId !== activeRoomId) {
+            const badge = document.createElement("span");
+            badge.className = "room-tab-badge";
+            badge.innerText = room.unreadCount > 9 ? "9+" : room.unreadCount;
+            tab.appendChild(badge);
         }
-    }
 
-    async function uploadAndSendFile(event) {
-        const file = event.target.files[0];
-        if (!file || !isMatched) return;
-
-        const formData = new FormData();
-        formData.append("file", file);
-        updateStatus("Đang tải file lên...", "#ffc107");
-
-        try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                socket.send(JSON.stringify({
-                    action: "SEND_MSG",
-                    message: data.url,
-                    msgType: data.type
-                }));
-                appendMediaMessage(data.url, data.type, "me");
-                updateStatus("Đã kết nối! Chúc hai bạn trò chuyện vui vẻ.", "#007bff");
-            } else {
-                alert("Tải file thất bại!");
+        // Nút đóng tab phòng chat
+        const closeBtn = document.createElement("button");
+        closeBtn.className = "room-tab-close";
+        closeBtn.innerHTML = "&times;";
+        closeBtn.title = "Rời phòng chat này";
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm(`Bạn có chắc muốn thoát phòng với ${room.partnerInfo.name || 'Người lạ'}?`)) {
+                leaveSpecificRoom(rId);
             }
-        } catch (err) {
-            console.error(err);
-            alert("Lỗi kết nối khi gửi file!");
-        } finally {
-            event.target.value = "";
+        };
+        tab.appendChild(closeBtn);
+
+        list.appendChild(tab);
+    });
+
+    const addBtn = document.getElementById("btn-add-room");
+    if (addBtn) {
+        addBtn.disabled = roomIds.length >= MAX_ROOMS;
+        addBtn.title = roomIds.length >= MAX_ROOMS 
+            ? "Đã đạt tối đa 5 phòng chat đồng thời" 
+            : `Tìm thêm bạn mới (${roomIds.length}/${MAX_ROOMS})`;
+    }
+}
+
+function renderChatBoxForActiveRoom() {
+    clearChat();
+    if (!activeRoomId || !rooms[activeRoomId]) return;
+
+    const msgs = rooms[activeRoomId].messages || [];
+    msgs.forEach(m => {
+        if (m.kind === "text" || m.kind === "system") {
+            appendMessage(m.text, m.sender || m.kind);
+        } else if (m.kind === "media") {
+            appendMediaMessage(m.url, m.mediaType, m.sender);
         }
+    });
+}
+
+function onRoomMessageReceived(roomId, message, msgType, sender) {
+    if (!rooms[roomId]) return;
+
+    if (msgType === "text") {
+        rooms[roomId].messages.push({ kind: "text", text: message, sender: sender });
+    } else {
+        rooms[roomId].messages.push({ kind: "media", url: message, mediaType: msgType, sender: sender });
     }
 
-    function displayPartnerInfo(info) {
-        const avatarEl = document.getElementById("partner-avatar");
-        const nameEl = document.getElementById("partner-name");
-        const ageEl = document.getElementById("partner-age");
-        const locationEl = document.getElementById("partner-location");
-
-        const defaultAvatar = "https://via.placeholder.com/150";
-
-        if (avatarEl) avatarEl.src = info.avatar || defaultAvatar;
-        if (nameEl) nameEl.innerText = info.name || "Người lạ";
-        if (ageEl) ageEl.innerText = info.age ? `${info.age} tuổi` : "Chưa rõ tuổi";
-        if (locationEl) locationEl.innerText = info.location || "Không xác định";
-    }
-
-    function clearPartnerInfo() {
-        const avatarEl = document.getElementById("partner-avatar");
-        const nameEl = document.getElementById("partner-name");
-        const ageEl = document.getElementById("partner-age");
-        const locationEl = document.getElementById("partner-location");
-
-        if (avatarEl) avatarEl.src = "https://via.placeholder.com/150";
-        if (nameEl) nameEl.innerText = "";
-        if (ageEl) ageEl.innerText = "";
-        if (locationEl) locationEl.innerText = "";
-    }
-
-    function updateStatus(text, color) {
-        const statusBox = document.getElementById("status");
-        if (statusBox) {
-            statusBox.innerText = text;
-            statusBox.style.backgroundColor = color;
-            statusBox.style.color = "#fff";
+    if (roomId === activeRoomId) {
+        if (msgType === "text") {
+            appendMessage(message, sender);
+        } else {
+            appendMediaMessage(message, msgType, sender);
         }
+    } else {
+        rooms[roomId].unreadCount = (rooms[roomId].unreadCount || 0) + 1;
+        renderRoomTabs();
     }
+}
 
-    function toggleChatInput(enable) {
-        const btnExit = document.getElementById("btn-exit");
-        const btnSend = document.getElementById("btn-send");
-        const btnMatch = document.getElementById("btn-match");
-        const msgInput = document.getElementById("msg-input");
-        const btnFile = document.getElementById("btn-file");
-        const menuExit = document.getElementById("menu-exit-room");
+function updateControlsState() {
+    const btnMatch = document.getElementById("btn-match");
+    const btnExit = document.getElementById("btn-exit");
+    const isFull = Object.keys(rooms).length >= MAX_ROOMS;
+    const isWsOpen = socket && socket.readyState === WebSocket.OPEN;
 
-        if (btnExit) btnExit.disabled = !enable;
-        if (btnSend) btnSend.disabled = !enable;
-        if (btnMatch) btnMatch.disabled = enable;
-        if (msgInput) msgInput.disabled = !enable;
-        if (btnFile) btnFile.disabled = !enable;
-        if (menuExit) menuExit.style.display = enable ? "flex" : "none";
+    if (btnMatch) {
+        btnMatch.disabled = !isWsOpen || isFull;
     }
+    if (btnExit) {
+        btnExit.disabled = !activeRoomId;
+    }
+}
+
+function showFindRoomOverlay(show) {
+    const overlay = document.getElementById("find-room-overlay");
+    if (overlay) {
+        if (show) overlay.classList.remove("hidden");
+        else overlay.classList.add("hidden");
+    }
+}
+
+function closeFindRoomOverlay() {
+    showFindRoomOverlay(false);
+}
+
+function startFindMatch() {
+    showFindRoomOverlay(false);
+    findMatch();
+}
+
+function sendMessage() {
+    if (!activeRoomId || !rooms[activeRoomId]) return;
+    const input = document.getElementById("msg-input");
+    const msg = input.value.trim();
+    if (msg !== "") {
+        socket.send(JSON.stringify({
+            action: "SEND_MSG",
+            roomId: activeRoomId,
+            message: msg,
+            msgType: "text"
+        }));
+        rooms[activeRoomId].messages.push({ kind: "text", text: msg, sender: "me" });
+        appendMessage(msg, "me");
+        input.value = "";
+    }
+}
+
+async function uploadAndSendFile(event) {
+    const file = event.target.files[0];
+    if (!file || !activeRoomId || !rooms[activeRoomId]) return;
+
+    const currentActive = activeRoomId;
+    const formData = new FormData();
+    formData.append("file", file);
+    updateStatus("Đang tải file lên...", "#ffc107");
+
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            socket.send(JSON.stringify({
+                action: "SEND_MSG",
+                roomId: currentActive,
+                message: data.url,
+                msgType: data.type
+            }));
+            if (rooms[currentActive]) {
+                rooms[currentActive].messages.push({
+                    kind: "media",
+                    url: data.url,
+                    mediaType: data.type,
+                    sender: "me"
+                });
+            }
+            if (activeRoomId === currentActive) {
+                appendMediaMessage(data.url, data.type, "me");
+                updateStatus("Đã gửi file thành công!", "#007bff");
+            }
+        } else {
+            alert("Tải file thất bại!");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi kết nối khi gửi file!");
+    } finally {
+        event.target.value = "";
+    }
+}
+
+function displayPartnerInfo(info) {
+    const avatarEl = document.getElementById("partner-avatar");
+    const nameEl = document.getElementById("partner-name");
+    const ageEl = document.getElementById("partner-age");
+    const locationEl = document.getElementById("partner-location");
+
+    const defaultAvatar = "https://via.placeholder.com/150";
+
+    if (avatarEl) avatarEl.src = (info && info.avatar) || defaultAvatar;
+    if (nameEl) nameEl.innerText = (info && info.name) || "Người lạ";
+    if (ageEl) ageEl.innerText = (info && info.age) ? `${info.age} tuổi` : "Chưa rõ tuổi";
+    if (locationEl) locationEl.innerText = (info && info.location) || "Không xác định";
+}
+
+function clearPartnerInfo() {
+    const avatarEl = document.getElementById("partner-avatar");
+    const nameEl = document.getElementById("partner-name");
+    const ageEl = document.getElementById("partner-age");
+    const locationEl = document.getElementById("partner-location");
+    const indicator = document.getElementById("room-badge-indicator");
+
+    if (avatarEl) avatarEl.src = "https://via.placeholder.com/150";
+    if (nameEl) nameEl.innerText = "Chưa ghép đôi";
+    if (ageEl) ageEl.innerText = "--";
+    if (locationEl) locationEl.innerText = "--";
+    if (indicator) indicator.style.display = "none";
+}
+
+function updateStatus(text, color) {
+    const statusBox = document.getElementById("status");
+    if (statusBox) {
+        statusBox.innerText = text;
+        statusBox.style.backgroundColor = color;
+        statusBox.style.color = "#fff";
+    }
+}
+
+function toggleChatInput(enable) {
+    const btnExit = document.getElementById("btn-exit");
+    const btnSend = document.getElementById("btn-send");
+    const msgInput = document.getElementById("msg-input");
+    const btnFile = document.getElementById("btn-file");
+    const menuExit = document.getElementById("menu-exit-room");
+
+    if (btnExit) btnExit.disabled = !enable;
+    if (btnSend) btnSend.disabled = !enable;
+    if (msgInput) msgInput.disabled = !enable;
+    if (btnFile) btnFile.disabled = !enable;
+    if (menuExit) menuExit.style.display = enable ? "flex" : "none";
+}
 
     function showModal(show) {
         const modal = document.getElementById("match-modal");

@@ -45,6 +45,17 @@
 
         <div id="status" class="status-box">Đang kết nối...</div>
 
+        <!-- Thanh danh sách các phòng chat đồng thời (Tối đa 5 phòng) -->
+        <div id="room-tabs-container" class="room-tabs-bar">
+            <div id="room-tabs-list" class="room-tabs-list">
+                <!-- Các tab sẽ được sinh tự động tại đây -->
+            </div>
+            <button id="btn-add-room" class="btn-add-tab" onclick="findMatch()" title="Tìm kiếm thêm người bạn mới (tối đa 5 phòng)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Tìm thêm bạn</span>
+            </button>
+        </div>
+
         <div id="partner-card">
             <img id="partner-avatar" src="https://via.placeholder.com/150" alt="Avatar" />
             <div class="partner-info">
@@ -52,6 +63,9 @@
                 <p>
                     <span id="partner-age">--</span> • <span id="partner-location">--</span>
                 </p>
+            </div>
+            <div id="room-badge-indicator" class="room-badge-indicator" style="margin-left: auto; display: none;">
+                <span class="badge-text" id="active-room-tag">Phòng 1</span>
             </div>
         </div>
 
@@ -144,7 +158,7 @@
         </div>
 
     </div>
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=5"></script>
 </body>
 
 </html>
