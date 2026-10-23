@@ -14,7 +14,7 @@ function getUserInfo() {
     };
 }
 
-function connectWebSocket() {
+/*function connectWebSocket() {
         if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
             return;
         }
@@ -56,7 +56,96 @@ function connectWebSocket() {
                 }, 3000);
             }
         };
+    }*/
+
+let socket = null;
+let isReconnecting = false;
+let reconnectTimer = null;
+
+function connectWebSocket() {
+    if (
+        socket &&
+        (socket.readyState === WebSocket.CONNECTING ||
+            socket.readyState === WebSocket.OPEN)
+    ) {
+        return;
     }
+
+    const protocol =
+        window.location.protocol === "https:" ? "wss:" : "ws:";
+
+    // Nếu backend chạy cổng khác, cần sửa địa chỉ này.
+    const url = `${protocol}//${window.location.host}/chat`;
+
+    console.log("Đang kết nối WebSocket:", url);
+
+    try {
+        socket = new WebSocket(url);
+    } catch (err) {
+        console.error("Không thể tạo WebSocket:", err);
+        scheduleReconnect();
+        return;
+    }
+
+    socket.onopen = () => {
+        console.log("WebSocket đã kết nối thành công!");
+
+        isReconnecting = false;
+        clearTimeout(reconnectTimer);
+
+        updateStatus(
+            "Đã kết nối! Bấm 'Tìm Room' để bắt đầu.",
+            "#28a745"
+        );
+
+        const btnMatch = document.getElementById("btn-match");
+        if (btnMatch) btnMatch.disabled = false;
+    };
+
+    socket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            handleServerEvent(data);
+        } catch (err) {
+            console.error("Lỗi xử lý tin nhắn server:", err);
+        }
+    };
+
+    socket.onerror = (event) => {
+        console.error("WebSocket gặp lỗi:", event);
+    };
+
+    socket.onclose = (event) => {
+        console.warn(
+            "WebSocket đã đóng. Code:",
+            event.code,
+            "Lý do:",
+            event.reason || "(không có)"
+        );
+
+        const btnMatch = document.getElementById("btn-match");
+        if (btnMatch) btnMatch.disabled = true;
+
+        updateStatus(
+            "Mất kết nối Server. Đang thử lại...",
+            "#dc3545"
+        );
+
+        scheduleReconnect();
+    };
+}
+
+function scheduleReconnect() {
+    if (isReconnecting) return;
+
+    isReconnecting = true;
+
+    reconnectTimer = setTimeout(() => {
+        isReconnecting = false;
+        connectWebSocket();
+    }, 3000);
+}
+
 
     function handleServerEvent(data) {
         switch (data.type) {
@@ -459,7 +548,6 @@ function connectWebSocket() {
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        // Đăng ký tự động nếu chưa có ID
         if (!currentUserId) {
             saveGuestProfile(); // Sẽ gọi API để lấy ID mới
         } else {
