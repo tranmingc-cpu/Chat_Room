@@ -1,5 +1,6 @@
 let socket = null;
 let isMatched = false;
+let isReconnecting = false;
 let currentUserId = localStorage.getItem('chatUserId');
 
 function getUserInfo() {
@@ -11,9 +12,9 @@ function getUserInfo() {
         location: document.getElementById("guest-location")?.value || "Không xác định",
         gender: document.getElementById("guest-gender")?.value || "khác"
     };
-    let isReconnecting = false;
+}
 
-    function connectWebSocket() {
+function connectWebSocket() {
         if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
             return;
         }
@@ -554,5 +555,3 @@ function getUserInfo() {
         document.getElementById('image-preview-content').src = url;
         modal.style.display = 'flex';
     }
-
-}

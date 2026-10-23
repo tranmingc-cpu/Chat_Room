@@ -44,19 +44,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             if (partnerId != null && sessions.containsKey(partnerId)) {
                 WebSocketSession partnerSession = sessions.get(partnerId);
 
-                Map<String, String> response = Map.of(
+                Map<String, Object> response = Map.of(
                         "type", "CHAT",
                         "message", (String) data.get("message"),
                         "msgType", (String) data.getOrDefault("msgType", "text")
                 );
-                partnerSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+                sendMessage(partnerSession, response);
             }
         } else if ("TYPING".equals(action)) {
             String partnerId = userPartners.get(session.getId());
             if (partnerId != null && sessions.containsKey(partnerId)) {
                 WebSocketSession partnerSession = sessions.get(partnerId);
-                Map<String, String> response = Map.of("type", "TYPING");
-                partnerSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+                Map<String, Object> response = Map.of("type", "TYPING");
+                sendMessage(partnerSession, response);
             }
         } else if ("SKIP".equals(action)) {
             disconnectPartner(session.getId());
@@ -106,9 +106,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void sendMessage(WebSocketSession session, Map<String, Object> data) throws IOException {
+    private void sendMessage(WebSocketSession session, Map<String, Object> data) {
         if (session != null && session.isOpen()) {
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(data)));
+            try {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(data)));
+            } catch (Exception e) {
+                System.err.println("Không thể gửi tin nhắn đến session: " + e.getMessage());
+            }
         }
     }
 }
