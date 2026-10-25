@@ -15,13 +15,21 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final MatchingService matchingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    // Map: clientId -> WebSocketSession
+    private final Map<String, WebSocketSession> clientSessions = new ConcurrentHashMap<>();
 
-    // Map: roomId -> [user1Id, user2Id]
+    // Map: sessionId -> clientId
+    private final Map<String, String> sessionClientMap = new ConcurrentHashMap<>();
+
+    // Map: roomId -> [clientId1, clientId2]
     private final Map<String, String[]> roomParticipants = new ConcurrentHashMap<>();
 
-    // Map: sessionId -> Set of roomIds user is in
+    // Map: clientId -> Set of roomIds user is in
     private final Map<String, java.util.Set<String>> userRooms = new ConcurrentHashMap<>();
+
+    // Map: clientId -> TimerTask/Future for disconnection cleanup
+    private final Map<String, java.util.concurrent.ScheduledFuture<?>> disconnectTimers = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ScheduledExecutorService scheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
 
     public ChatWebSocketHandler(MatchingService matchingService) {
         this.matchingService = matchingService;
@@ -29,10 +37,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        sessions.put(session.getId(), session);
-        userRooms.put(session.getId(), ConcurrentHashMap.newKeySet());
-        System.out.println("User kết nối: " + session.getId());
+        System.out.println("WebSocket kết nối tạm thời: " + session.getId());
     }
+
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
@@ -40,8 +47,41 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String action = (String) data.get("action");
         String sessionId = session.getId();
 
+        if ("INIT".equals(action)) {
+            String clientId = (String) data.get("clientId");
+            if (clientId != null && !clientId.trim().isEmpty()) {
+                sessionClientMap.put(sessionId, clientId);
+                clientSessions.put(clientId, session);
+                userRooms.computeIfAbsent(clientId, k -> ConcurrentHashMap.newKeySet());
+
+                // Nếu có timer ngắt kết nối đang chờ, hủy đi vì user đã F5 quay lại kịp thời
+                java.util.concurrent.ScheduledFuture<?> timer = disconnectTimers.remove(clientId);
+                if (timer != null) {
+                    timer.cancel(false);
+                    System.out.println("User " + clientId + " đã kết nối lại (F5), hủy timer dọn phòng!");
+                }
+            }
+            return;
+        }
+
+        // Lấy clientId của session này (fallback sang sessionId nếu chưa có)
+        String clientId = sessionClientMap.getOrDefault(sessionId, sessionId);
+
+        if ("REJOIN_ROOMS".equals(action)) {
+            List<String> clientRoomIds = (List<String>) data.get("roomIds");
+            if (clientRoomIds != null) {
+                for (String rId : clientRoomIds) {
+                    String[] participants = roomParticipants.get(rId);
+                    if (participants != null && (clientId.equals(participants[0]) || clientId.equals(participants[1]))) {
+                        userRooms.computeIfAbsent(clientId, k -> ConcurrentHashMap.newKeySet()).add(rId);
+                    }
+                }
+            }
+            return;
+        }
+
         if ("FIND_MATCH".equals(action)) {
-            java.util.Set<String> activeRooms = userRooms.getOrDefault(sessionId, Collections.emptySet());
+            java.util.Set<String> activeRooms = userRooms.getOrDefault(clientId, Collections.emptySet());
             if (activeRooms.size() >= 5) {
                 sendMessage(session, Map.of(
                         "type", "ERROR",
@@ -50,14 +90,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
             Map<String, String> userInfo = (Map<String, String>) data.get("userInfo");
-            matchingService.addToQueue(sessionId, userInfo != null ? userInfo : Map.of());
+            matchingService.addToQueue(clientId, userInfo != null ? userInfo : Map.of());
             tryMatch();
         } else if ("SEND_MSG".equals(action)) {
             String roomId = (String) data.get("roomId");
-            String partnerId = getPartnerInRoom(roomId, sessionId);
-            if (partnerId != null && sessions.containsKey(partnerId)) {
-                WebSocketSession partnerSession = sessions.get(partnerId);
-
+            String partnerId = getPartnerInRoom(roomId, clientId);
+            if (partnerId != null && clientSessions.containsKey(partnerId)) {
+                WebSocketSession partnerSession = clientSessions.get(partnerId);
                 Map<String, Object> response = Map.of(
                         "type", "CHAT",
                         "roomId", roomId,
@@ -68,9 +107,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
         } else if ("TYPING".equals(action)) {
             String roomId = (String) data.get("roomId");
-            String partnerId = getPartnerInRoom(roomId, sessionId);
-            if (partnerId != null && sessions.containsKey(partnerId)) {
-                WebSocketSession partnerSession = sessions.get(partnerId);
+            String partnerId = getPartnerInRoom(roomId, clientId);
+            if (partnerId != null && clientSessions.containsKey(partnerId)) {
+                WebSocketSession partnerSession = clientSessions.get(partnerId);
                 Map<String, Object> response = Map.of(
                         "type", "TYPING",
                         "roomId", roomId
@@ -80,41 +119,41 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         } else if ("LEAVE_ROOM".equals(action) || "SKIP".equals(action)) {
             String roomId = (String) data.get("roomId");
             if (roomId != null) {
-                leaveRoom(roomId, sessionId);
+                leaveRoom(roomId, clientId);
             } else {
-                java.util.Set<String> rooms = userRooms.get(sessionId);
+                java.util.Set<String> rooms = userRooms.get(clientId);
                 if (rooms != null && !rooms.isEmpty()) {
                     String firstRoom = rooms.iterator().next();
-                    leaveRoom(firstRoom, sessionId);
+                    leaveRoom(firstRoom, clientId);
                 }
             }
         } else if ("CANCEL_MATCH".equals(action)) {
-            matchingService.removeFromQueue(sessionId);
+            matchingService.removeFromQueue(clientId);
         }
     }
 
-    private String getPartnerInRoom(String roomId, String sessionId) {
+    private String getPartnerInRoom(String roomId, String clientId) {
         if (roomId == null) return null;
         String[] participants = roomParticipants.get(roomId);
         if (participants != null) {
-            if (sessionId.equals(participants[0])) return participants[1];
-            if (sessionId.equals(participants[1])) return participants[0];
+            if (clientId.equals(participants[0])) return participants[1];
+            if (clientId.equals(participants[1])) return participants[0];
         }
         return null;
     }
 
-    private void leaveRoom(String roomId, String sessionId) throws IOException {
-        String partnerId = getPartnerInRoom(roomId, sessionId);
+    private void leaveRoom(String roomId, String clientId) throws IOException {
+        String partnerId = getPartnerInRoom(roomId, clientId);
         roomParticipants.remove(roomId);
 
-        java.util.Set<String> rooms = userRooms.get(sessionId);
+        java.util.Set<String> rooms = userRooms.get(clientId);
         if (rooms != null) rooms.remove(roomId);
 
         if (partnerId != null) {
             java.util.Set<String> partnerRooms = userRooms.get(partnerId);
             if (partnerRooms != null) partnerRooms.remove(roomId);
 
-            WebSocketSession partnerSession = sessions.get(partnerId);
+            WebSocketSession partnerSession = clientSessions.get(partnerId);
             if (partnerSession != null && partnerSession.isOpen()) {
                 sendMessage(partnerSession, Map.of(
                         "type", "PARTNER_LEFT",
@@ -127,16 +166,35 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String sessionId = session.getId();
-        matchingService.removeFromQueue(sessionId);
+        String clientId = sessionClientMap.remove(sessionId);
 
-        java.util.Set<String> rooms = userRooms.remove(sessionId);
-        if (rooms != null) {
-            for (String roomId : new java.util.ArrayList<>(rooms)) {
-                leaveRoom(roomId, sessionId);
+        if (clientId != null) {
+            matchingService.removeFromQueue(clientId);
+
+            // Kiểm tra xem session vừa đóng có đúng là session đang lưu không
+            WebSocketSession currentSession = clientSessions.get(clientId);
+            if (currentSession != null && currentSession.getId().equals(sessionId)) {
+                // Cho 60 giây grace period để user F5 hoặc tải lại trang mà không bị mất phòng
+                java.util.concurrent.ScheduledFuture<?> future = scheduler.schedule(() -> {
+                    try {
+                        clientSessions.remove(clientId);
+                        disconnectTimers.remove(clientId);
+                        java.util.Set<String> rooms = userRooms.remove(clientId);
+                        if (rooms != null) {
+                            for (String roomId : new java.util.ArrayList<>(rooms)) {
+                                leaveRoom(roomId, clientId);
+                            }
+                        }
+                        System.out.println("Hết thời gian grace period (60s), dọn dẹp user " + clientId);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }, 60, java.util.concurrent.TimeUnit.SECONDS);
+
+                disconnectTimers.put(clientId, future);
             }
         }
-        sessions.remove(sessionId);
-        System.out.println("User ngắt kết nối: " + sessionId);
+        System.out.println("WebSocket ngắt kết nối session: " + sessionId + " (client: " + clientId + ")");
     }
 
     private synchronized void tryMatch() throws IOException {
@@ -156,14 +214,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     "roomId", roomId,
                     "partnerInfo", matchingService.getUserInfo(user2Id)
             );
-            sendMessage(sessions.get(user1Id), msg1);
+            sendMessage(clientSessions.get(user1Id), msg1);
 
             Map<String, Object> msg2 = Map.of(
                     "type", "MATCHED",
                     "roomId", roomId,
                     "partnerInfo", matchingService.getUserInfo(user1Id)
             );
-            sendMessage(sessions.get(user2Id), msg2);
+            sendMessage(clientSessions.get(user2Id), msg2);
         }
     }
 

@@ -1,11 +1,49 @@
 let socket = null;
 let isReconnecting = false;
 let currentUserId = localStorage.getItem('chatUserId');
+let clientUuid = localStorage.getItem('chatClientUuid');
+if (!clientUuid) {
+    clientUuid = 'c_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    localStorage.setItem('chatClientUuid', clientUuid);
+}
 const MAX_ROOMS = 5;
 let rooms = {};
 let activeRoomId = null;
 let pendingMatchData = null;
 let isSearching = false;
+
+function saveRoomsToStorage() {
+    try {
+        localStorage.setItem("activeChatRooms", JSON.stringify(rooms));
+        if (activeRoomId) {
+            localStorage.setItem("lastActiveRoomId", activeRoomId);
+        } else {
+            localStorage.removeItem("lastActiveRoomId");
+        }
+    } catch (e) {
+        console.error("Lỗi lưu rooms vào localStorage:", e);
+    }
+}
+
+function loadSavedRooms() {
+    try {
+        const savedRooms = localStorage.getItem("activeChatRooms");
+        if (savedRooms) {
+            rooms = JSON.parse(savedRooms) || {};
+        }
+        const lastActive = localStorage.getItem("lastActiveRoomId");
+        if (lastActive && rooms[lastActive]) {
+            activeRoomId = lastActive;
+        } else {
+            const roomIds = Object.keys(rooms);
+            activeRoomId = roomIds.length > 0 ? roomIds[0] : null;
+        }
+    } catch (e) {
+        console.error("Lỗi đọc rooms từ localStorage:", e);
+        rooms = {};
+        activeRoomId = null;
+    }
+}
 
 function getUserInfo() {
     return {
@@ -45,6 +83,21 @@ function connectWebSocket() {
 
         isReconnecting = false;
         clearTimeout(reconnectTimer);
+
+        // Gửi định danh clientId cố định
+        socket.send(JSON.stringify({
+            action: "INIT",
+            clientId: clientUuid
+        }));
+
+        // Khôi phục lại các room đang có trên server
+        const activeRoomIds = Object.keys(rooms);
+        if (activeRoomIds.length > 0) {
+            socket.send(JSON.stringify({
+                action: "REJOIN_ROOMS",
+                roomIds: activeRoomIds
+            }));
+        }
 
         // Ẩn thanh status khi kết nối thành công/bình thường
         const statusBox = document.getElementById("status");
@@ -223,6 +276,7 @@ function acceptMatch() {
 
     // Chuyển sang phòng vừa tạo
     switchRoom(roomId);
+    saveRoomsToStorage();
     renderRoomTabs();
     updateControlsState();
 }
@@ -269,6 +323,7 @@ function leaveSpecificRoom(roomId) {
         renderRoomTabs();
         showFindRoomOverlay(true);
     }
+    saveRoomsToStorage();
     renderRoomTabs();
     updateControlsState();
 }
@@ -286,6 +341,7 @@ function onPartnerLeft(roomId) {
         } else {
             rooms[roomId].unreadCount = (rooms[roomId].unreadCount || 0) + 1;
         }
+        saveRoomsToStorage();
         renderRoomTabs();
     }
 }
@@ -308,7 +364,7 @@ function switchRoom(roomId) {
         activeRoomTag.innerText = `Phòng ${roomIndex}`;
     }
 
-    updateStatus(`Đang ở phòng với ${rooms[roomId].partnerInfo.name || "Người lạ"}`, "#007bff");
+    saveRoomsToStorage();
     updateControlsState();
 }
 
@@ -427,6 +483,7 @@ function onRoomMessageReceived(roomId, message, msgType, sender) {
         rooms[roomId].unreadCount = (rooms[roomId].unreadCount || 0) + 1;
         renderRoomTabs();
     }
+    saveRoomsToStorage();
 }
 
 function updateControlsState() {
@@ -474,6 +531,7 @@ function sendMessage() {
         rooms[activeRoomId].messages.push({ kind: "text", text: msg, sender: "me" });
         appendMessage(msg, "me");
         input.value = "";
+        saveRoomsToStorage();
     }
 }
 
@@ -512,6 +570,7 @@ async function uploadAndSendFile(event) {
                 appendMediaMessage(data.url, data.type, "me");
                 updateStatus("Đã gửi file thành công!", "#007bff");
             }
+            saveRoomsToStorage();
         } else {
             alert("Tải file thất bại!");
         }
@@ -781,6 +840,15 @@ function toggleChatInput(enable) {
                     preview.src = e.target.value || "https://via.placeholder.com/150";
                 }
             });
+        }
+
+        // Khôi phục lại các phòng và tin nhắn đã lưu trước khi F5
+        loadSavedRooms();
+        if (Object.keys(rooms).length > 0) {
+            renderRoomTabs();
+            if (activeRoomId && rooms[activeRoomId]) {
+                switchRoom(activeRoomId);
+            }
         }
 
         loadProvinces();
