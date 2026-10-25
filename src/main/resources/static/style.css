@@ -733,7 +733,7 @@ body.theme-female #btn-match {
 }
 
 body.theme-female #btn-match:hover:not(:disabled) {
-    background-color: #f8bbd0;
+    background-color: #fb36a2;
 }
 
 body.theme-female .input-group button#btn-send {
