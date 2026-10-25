@@ -5,6 +5,7 @@ const MAX_ROOMS = 5;
 let rooms = {};
 let activeRoomId = null;
 let pendingMatchData = null;
+let isSearching = false;
 
 function getUserInfo() {
     return {
@@ -35,6 +36,7 @@ function connectWebSocket() {
         socket = new WebSocket(url);
     } catch (err) {
         console.error("Không thể tạo WebSocket:", err);
+        updateStatus("Mất kết nối Server. Đang thử lại...", "#dc3545");
         scheduleReconnect();
         return;
     }
@@ -44,8 +46,10 @@ function connectWebSocket() {
         isReconnecting = false;
         clearTimeout(reconnectTimer);
 
-        if (Object.keys(rooms).length === 0) {
-            updateStatus("Đã kết nối! Bấm 'Tìm Room' để bắt đầu.", "#28a745");
+        // Ẩn thanh status khi kết nối thành công/bình thường
+        const statusBox = document.getElementById("status");
+        if (statusBox) {
+            statusBox.style.display = "none";
         }
         updateControlsState();
     };
@@ -94,10 +98,11 @@ function scheduleReconnect() {
 function handleServerEvent(data) {
     switch (data.type) {
         case 'MATCHED':
+            isSearching = false;
             showLoadingOverlay(false);
+            renderRoomTabs();
             pendingMatchData = data;
             showModal(true);
-            updateStatus("Tìm thấy room mới! Đang chờ bạn xác nhận...", "#ffc107");
             if (data.partnerInfo) {
                 const modalDesc = document.querySelector("#match-modal p");
                 if (modalDesc) {
@@ -118,7 +123,9 @@ function handleServerEvent(data) {
             break;
 
         case 'ERROR':
+            isSearching = false;
             showLoadingOverlay(false);
+            renderRoomTabs();
             alert(data.message || "Đã xảy ra lỗi!");
             updateControlsState();
             break;
@@ -131,6 +138,12 @@ function handleServerEvent(data) {
 async function findMatch() {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
         alert("Chưa kết nối đến máy chủ. Vui lòng đợi trong giây lát!");
+        return;
+    }
+
+    // Nếu đang tìm kiếm và người dùng bấm lại nút "Tìm thêm bạn", hủy tìm kiếm
+    if (isSearching) {
+        cancelSearch();
         return;
     }
 
@@ -157,8 +170,17 @@ async function findMatch() {
         userInfo: userInfo
     }));
 
-    updateStatus(`Đang tìm kiếm bạn chat ngẫu nhiên... (${Object.keys(rooms).length}/${MAX_ROOMS} phòng)`, "#ffc107");
-    showLoadingOverlay(true);
+    isSearching = true;
+
+    // Nếu chưa có phòng nào đang mở thì hiện modal tìm kiếm toàn màn hình,
+    // còn nếu đã có ít nhất 1 phòng thì KHÔNG che màn hình, để người dùng vẫn chat bình thường!
+    if (Object.keys(rooms).length === 0) {
+        showLoadingOverlay(true);
+    } else {
+        showLoadingOverlay(false);
+    }
+
+    renderRoomTabs();
     updateControlsState();
 }
 
@@ -171,16 +193,19 @@ function showLoadingOverlay(show) {
 }
 
 function cancelSearch() {
+    isSearching = false;
     showLoadingOverlay(false);
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({action: "CANCEL_MATCH"}));
     }
-    updateStatus("Đã hủy tìm kiếm.", "#6c757d");
+    renderRoomTabs();
     updateControlsState();
 }
 
 function acceptMatch() {
     showModal(false);
+    isSearching = false;
+    renderRoomTabs();
     if (!pendingMatchData) return;
 
     const roomId = pendingMatchData.roomId;
@@ -199,12 +224,13 @@ function acceptMatch() {
     // Chuyển sang phòng vừa tạo
     switchRoom(roomId);
     renderRoomTabs();
-    updateStatus("Đã kết nối phòng mới! Chúc hai bạn trò chuyện vui vẻ.", "#007bff");
     updateControlsState();
 }
 
 function rejectMatch() {
     showModal(false);
+    isSearching = false;
+    renderRoomTabs();
     if (pendingMatchData) {
         socket.send(JSON.stringify({
             action: "SKIP",
@@ -212,7 +238,6 @@ function rejectMatch() {
         }));
         pendingMatchData = null;
     }
-    updateStatus("Đã từ chối ghép đôi.", "#6c757d");
     updateControlsState();
 }
 
@@ -242,7 +267,6 @@ function leaveSpecificRoom(roomId) {
         clearChat();
         toggleChatInput(false);
         renderRoomTabs();
-        updateStatus("Đã thoát toàn bộ phòng. Bấm 'Tìm Room' để tìm bạn mới.", "#6c757d");
         showFindRoomOverlay(true);
     }
     renderRoomTabs();
@@ -320,16 +344,14 @@ function renderRoomTabs() {
             tab.appendChild(badge);
         }
 
-        // Nút đóng tab phòng chat
+        // Nút đóng tab phòng chat: Cứ thế xóa trực tiếp, không cần confirm
         const closeBtn = document.createElement("button");
         closeBtn.className = "room-tab-close";
         closeBtn.innerHTML = "&times;";
         closeBtn.title = "Rời phòng chat này";
         closeBtn.onclick = (e) => {
             e.stopPropagation();
-            if (confirm(`Bạn có chắc muốn thoát phòng với ${room.partnerInfo.name || 'Người lạ'}?`)) {
-                leaveSpecificRoom(rId);
-            }
+            leaveSpecificRoom(rId);
         };
         tab.appendChild(closeBtn);
 
@@ -338,10 +360,37 @@ function renderRoomTabs() {
 
     const addBtn = document.getElementById("btn-add-room");
     if (addBtn) {
-        addBtn.disabled = roomIds.length >= MAX_ROOMS;
-        addBtn.title = roomIds.length >= MAX_ROOMS 
-            ? "Đã đạt tối đa 5 phòng chat đồng thời" 
-            : `Tìm thêm bạn mới (${roomIds.length}/${MAX_ROOMS})`;
+        if (isSearching) {
+            addBtn.disabled = false;
+            addBtn.classList.add("searching");
+            addBtn.title = "Đang tìm phòng... Bấm để hủy";
+            addBtn.innerHTML = `
+                <svg class="spin-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="2" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="22"></line>
+                    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                    <line x1="2" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="22" y2="12"></line>
+                    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                    <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                </svg>
+                <span>Đang tìm...</span>
+            `;
+        } else {
+            addBtn.classList.remove("searching");
+            addBtn.disabled = roomIds.length >= MAX_ROOMS;
+            addBtn.title = roomIds.length >= MAX_ROOMS 
+                ? "Đã đạt tối đa 5 phòng chat đồng thời" 
+                : `Tìm thêm bạn mới (${roomIds.length}/${MAX_ROOMS})`;
+            addBtn.innerHTML = `
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Tìm thêm bạn</span>
+            `;
+        }
     }
 }
 
@@ -505,8 +554,13 @@ function clearPartnerInfo() {
 function updateStatus(text, color) {
     const statusBox = document.getElementById("status");
     if (statusBox) {
+        if (!text) {
+            statusBox.style.display = "none";
+            return;
+        }
+        statusBox.style.display = "block";
         statusBox.innerText = text;
-        statusBox.style.backgroundColor = color;
+        statusBox.style.backgroundColor = color || "#dc3545";
         statusBox.style.color = "#fff";
     }
 }

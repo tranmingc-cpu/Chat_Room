@@ -41,13 +41,13 @@ body {
     justify-content: space-between;
     align-items: center;
     background: #ffffff;
-    padding: 12px 20px;
+    padding: 10px 16px;
     border-bottom: 1px solid #e4e6eb;
     z-index: 10;
 }
 
 .header-bar h2 {
-    font-size: 1.3rem;
+    font-size: 1.15rem;
     font-weight: 600;
     color: #050505;
 }
@@ -57,7 +57,7 @@ body {
     border: none;
     color: #65676b;
     cursor: pointer;
-    padding: 8px;
+    padding: 6px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -69,9 +69,9 @@ body {
 }
 
 .status-box {
-    padding: 10px 16px;
+    padding: 8px 14px;
     text-align: center;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     background-color: #fffbe6;
     color: #d48806;
     border-bottom: 1px solid #ffe58f;
@@ -100,13 +100,13 @@ body {
 .room-tab {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background: #ffffff;
     border: 1px solid #dcdfe4;
-    border-radius: 20px;
-    padding: 6px 12px;
+    border-radius: 16px;
+    padding: 5px 10px;
     cursor: pointer;
-    font-size: 0.88rem;
+    font-size: 0.84rem;
     font-weight: 500;
     color: #4b4f56;
     transition: all 0.2s ease;
@@ -128,15 +128,15 @@ body {
 }
 
 .room-tab-avatar {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     object-fit: cover;
     background: #ccc;
 }
 
 .room-tab-title {
-    max-width: 90px;
+    max-width: 85px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -147,11 +147,11 @@ body {
     border: none;
     cursor: pointer;
     color: #8a8d91;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: bold;
     border-radius: 50%;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -171,14 +171,14 @@ body {
     right: -3px;
     background: #e41e3f;
     color: #fff;
-    font-size: 10px;
-    min-width: 16px;
-    height: 16px;
-    border-radius: 8px;
+    font-size: 9px;
+    min-width: 14px;
+    height: 14px;
+    border-radius: 7px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 4px;
+    padding: 0 3px;
     font-weight: bold;
     border: 2px solid #fff;
     animation: pulseBadge 1.5s infinite;
@@ -205,9 +205,9 @@ body {
     background: #0084ff;
     color: #ffffff;
     border: none;
-    border-radius: 18px;
+    border-radius: 16px;
     padding: 6px 12px;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
@@ -215,8 +215,14 @@ body {
     box-shadow: 0 2px 4px rgba(0, 132, 255, 0.2);
 }
 
+.btn-add-tab svg {
+    width: 15px;
+    height: 15px;
+}
+
 .btn-add-tab:hover {
     background: #006bce;
+    transform: translateY(-1px);
 }
 
 .btn-add-tab:disabled {
@@ -225,12 +231,35 @@ body {
     box-shadow: none;
 }
 
+.btn-add-tab.searching {
+    background: #f59e0b;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.35);
+    cursor: pointer;
+}
+
+.btn-add-tab.searching:hover {
+    background: #d97706;
+}
+
+.btn-add-tab .spin-icon {
+    animation: spinTabIcon 1s linear infinite;
+}
+
+@keyframes spinTabIcon {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .room-badge-indicator {
     background: #e7f3ff;
     color: #1877f2;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.8rem;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.78rem;
     font-weight: 600;
 }
 
@@ -238,14 +267,14 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 20px;
+    padding: 8px 16px;
     background: #ffffff;
     border-bottom: 1px solid #e4e6eb;
 }
 
 #partner-avatar {
-    width: 70px;
-    height: 70px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     object-fit: cover;
     background-color: #e4e6eb;
@@ -257,30 +286,30 @@ body {
 }
 
 #partner-name {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     color: #050505;
 }
 
 #partner-card p {
-    font-size: 0.95rem;
+    font-size: 0.84rem;
     color: #65676b;
     margin-top: 2px;
 }
 
 .chat-box {
     flex: 1;
-    padding: 20px;
+    padding: 14px 16px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     background-color: #ffffff;
     position: relative;
 }
 
 .chat-box::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
 }
 
 .chat-box::-webkit-scrollbar-thumb {
@@ -290,11 +319,11 @@ body {
 
 .message {
     max-width: 65%;
-    padding: 12px 16px;
-    font-size: 1.1rem;
+    padding: 8px 13px;
+    font-size: 0.95rem;
     line-height: 1.4;
     word-break: break-word;
-    border-radius: 18px;
+    border-radius: 16px;
 }
 
 .message.me {
@@ -315,8 +344,8 @@ body {
     align-self: center;
     background-color: transparent;
     color: #65676b;
-    font-size: 0.95rem;
-    padding: 8px 0;
+    font-size: 0.84rem;
+    padding: 6px 0;
     max-width: 90%;
     text-align: center;
 }
@@ -324,25 +353,25 @@ body {
 .message img,
 .message video {
     max-width: 100%;
-    border-radius: 12px;
+    border-radius: 10px;
     margin-top: 4px;
 }
 
 .controls {
     display: flex;
-    gap: 10px;
-    padding: 10px 20px;
+    gap: 8px;
+    padding: 8px 16px;
     background-color: #ffffff;
     border-top: 1px solid #e4e6eb;
 }
 
 .controls button {
     flex: 1;
-    padding: 14px;
+    padding: 9px;
     border: none;
     border-radius: 6px;
     font-weight: 600;
-    font-size: 1.05rem;
+    font-size: 0.92rem;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -372,8 +401,8 @@ body {
 
 .input-group {
     display: flex;
-    gap: 10px;
-    padding: 12px 20px;
+    gap: 8px;
+    padding: 8px 16px;
     background-color: #ffffff;
     border-top: 1px solid #e4e6eb;
     align-items: center;
@@ -381,11 +410,11 @@ body {
 
 .input-group input[type="text"] {
     flex: 1;
-    padding: 14px 20px;
+    padding: 9px 15px;
     border: 1px solid #ccd0d5;
     border-radius: 20px;
     outline: none;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     background-color: #f0f2f5;
     color: #050505;
 }
@@ -395,8 +424,8 @@ body {
 }
 
 .input-group button {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     border: none;
     border-radius: 50%;
     background-color: transparent;
@@ -439,14 +468,14 @@ body {
 .modal-content {
     background-color: #ffffff;
     width: 100%;
-    max-width: 400px;
-    padding: 32px;
+    max-width: 380px;
+    padding: 22px 24px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     border: 1px solid #ddd;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     position: relative;
 }
 
@@ -458,26 +487,26 @@ body {
 
 .modal-content h3 {
     color: #050505;
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     font-weight: 600;
     text-align: center;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .modal-content p {
     text-align: center;
     color: #65676b;
-    font-size: 1.05rem;
-    margin-bottom: 8px;
+    font-size: 0.92rem;
+    margin-bottom: 4px;
 }
 
 .modal-content input,
 .modal-content select {
     width: 100%;
-    padding: 14px 16px;
+    padding: 10px 14px;
     border: 1px solid #ccd0d5;
     border-radius: 6px;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     outline: none;
     color: #050505;
 }
@@ -500,19 +529,19 @@ body {
 .modal-actions {
     display: flex;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 8px;
     width: 100%;
 }
 
 .btn-accept,
 .btn-reject {
     flex: 1;
-    padding: 14px;
+    padding: 10px;
     border: none;
     border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     display: flex;
     align-items: center;
     justify-content: center;
