@@ -454,12 +454,16 @@ function renderChatBoxForActiveRoom() {
     clearChat();
     if (!activeRoomId || !rooms[activeRoomId]) return;
 
+    const partnerGender = rooms[activeRoomId]?.partnerInfo?.gender;
+    const isFemalePartner = partnerGender === "nu" || partnerGender === "female";
+
     const msgs = rooms[activeRoomId].messages || [];
     msgs.forEach(m => {
+        const isPartnerMsg = (m.sender === "partner");
         if (m.kind === "text" || m.kind === "system") {
-            appendMessage(m.text, m.sender || m.kind);
+            appendMessage(m.text, m.sender || m.kind, isPartnerMsg && isFemalePartner);
         } else if (m.kind === "media") {
-            appendMediaMessage(m.url, m.mediaType, m.sender);
+            appendMediaMessage(m.url, m.mediaType, m.sender, isPartnerMsg && isFemalePartner);
         }
     });
 }
@@ -474,10 +478,13 @@ function onRoomMessageReceived(roomId, message, msgType, sender) {
     }
 
     if (roomId === activeRoomId) {
+        const partnerGender = rooms[roomId]?.partnerInfo?.gender;
+        const isFemalePartner = (partnerGender === "nu" || partnerGender === "female");
+
         if (msgType === "text") {
-            appendMessage(message, sender);
+            appendMessage(message, sender, isFemalePartner);
         } else {
-            appendMediaMessage(message, msgType, sender);
+            appendMediaMessage(message, msgType, sender, isFemalePartner);
         }
     } else {
         rooms[roomId].unreadCount = (rooms[roomId].unreadCount || 0) + 1;
@@ -568,11 +575,8 @@ async function uploadAndSendFile(event) {
             }
             if (activeRoomId === currentActive) {
                 appendMediaMessage(data.url, data.type, "me");
-                updateStatus("Đã gửi file thành công!", "#007bff");
             }
             saveRoomsToStorage();
-        } else {
-            alert("Tải file thất bại!");
         }
     } catch (err) {
         console.error(err);
@@ -581,7 +585,6 @@ async function uploadAndSendFile(event) {
         event.target.value = "";
     }
 }
-
 function displayPartnerInfo(info) {
     const avatarEl = document.getElementById("partner-avatar");
     const nameEl = document.getElementById("partner-name");
@@ -646,10 +649,10 @@ function toggleChatInput(enable) {
         }
     }
 
-    function appendMediaMessage(url, type, sender) {
+    function appendMediaMessage(url, type, sender, isFemalePartner) {
         const chatBox = document.getElementById("chat-box");
         const msgDiv = document.createElement("div");
-        msgDiv.className = `message ${sender}`;
+        msgDiv.className = `message ${sender}${isFemalePartner ? ' female' : ''}`;
 
         if (type === 'image') {
             msgDiv.innerHTML = `<img src="${url}" alt="Hình ảnh" style="max-width:200px; border-radius:8px; cursor:pointer;" onclick="openImageModal('${url}')" />`;
@@ -661,10 +664,10 @@ function toggleChatInput(enable) {
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    function appendMessage(msg, type) {
+    function appendMessage(msg, type, isFemalePartner) {
         const chatBox = document.getElementById("chat-box");
         const msgDiv = document.createElement("div");
-        msgDiv.className = `message ${type}`;
+        msgDiv.className = `message ${type}${isFemalePartner ? ' female' : ''}`;
         msgDiv.innerText = msg;
         chatBox.appendChild(msgDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -720,6 +723,13 @@ function toggleChatInput(enable) {
         }
         if (nameEl) {
             nameEl.innerText = profile.name || "Người lạ";
+        }
+
+        // Tự động chuyển giao diện sang tone hồng nếu người dùng là Nữ
+        if (profile.gender === "nu" || profile.gender === "female") {
+            document.body.classList.add("theme-female");
+        } else {
+            document.body.classList.remove("theme-female");
         }
     }
 
