@@ -1,8 +1,10 @@
-// Quản lý nhiều phòng (Tối đa 5 phòng)
+let socket = null;
+let isReconnecting = false;
+let currentUserId = localStorage.getItem('chatUserId');
 const MAX_ROOMS = 5;
-let rooms = {}; // roomId -> { partnerInfo, messages: [], unreadCount: 0 }
+let rooms = {};
 let activeRoomId = null;
-let pendingMatchData = null; // Dữ liệu phòng đang chờ xác nhận (match-modal)
+let pendingMatchData = null;
 
 function getUserInfo() {
     return {
@@ -25,14 +27,10 @@ function connectWebSocket() {
     ) {
         return;
     }
-
     const protocol =
         window.location.protocol === "https:" ? "wss:" : "ws:";
-
     const url = `${protocol}//${window.location.host}/chat`;
-
     console.log("Đang kết nối WebSocket:", url);
-
     try {
         socket = new WebSocket(url);
     } catch (err) {
@@ -40,7 +38,6 @@ function connectWebSocket() {
         scheduleReconnect();
         return;
     }
-
     socket.onopen = () => {
         console.log("WebSocket đã kết nối thành công!");
 
@@ -102,7 +99,6 @@ function handleServerEvent(data) {
             showModal(true);
             updateStatus("Tìm thấy room mới! Đang chờ bạn xác nhận...", "#ffc107");
             if (data.partnerInfo) {
-                // Tạm thời hiển thị thông tin bạn mới lên modal xem trước nếu muốn
                 const modalDesc = document.querySelector("#match-modal p");
                 if (modalDesc) {
                     const name = data.partnerInfo.name || "Người lạ";
@@ -142,7 +138,6 @@ async function findMatch() {
         alert(`Bạn chỉ có thể trò chuyện tối đa ${MAX_ROOMS} phòng cùng lúc! Hãy đóng bớt 1 phòng để tìm phòng mới.`);
         return;
     }
-
     if (currentUserId) {
         try {
             const res = await fetch(`/api/users/${currentUserId}/check-ban`);
@@ -640,7 +635,6 @@ function toggleChatInput(enable) {
             avatar: document.getElementById("guest-avatar")?.value || ""
         };
 
-        // Nếu đã có ID thì gửi kèm để update
         if (currentUserId) {
             profile.id = currentUserId;
         }
@@ -654,7 +648,6 @@ function toggleChatInput(enable) {
 
             if (response.ok) {
                 const data = await response.json();
-                // Server trả về ID chuẩn, lưu lại vào biến và localStorage
                 currentUserId = data.id.toString();
                 localStorage.setItem("chatUserId", currentUserId);
 
@@ -702,12 +695,11 @@ function toggleChatInput(enable) {
 
     document.addEventListener("DOMContentLoaded", function () {
         if (!currentUserId) {
-            saveGuestProfile(); // Sẽ gọi API để lấy ID mới
+            saveGuestProfile();
         } else {
             const userIdEl = document.getElementById('user-id');
             if (userIdEl) userIdEl.innerText = currentUserId;
         }
-
         try {
             const savedProfile = localStorage.getItem("chatProfile");
             if (savedProfile) {
@@ -722,8 +714,6 @@ function toggleChatInput(enable) {
                     if (previewEl) previewEl.src = profile.avatar;
                 }
                 updateUserProfileDisplay(profile);
-
-                // Cập nhật lại thông tin mới nhất lên Server
                 saveGuestProfile();
             }
         } catch (e) {

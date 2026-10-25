@@ -78,7 +78,6 @@ body {
     font-weight: 500;
 }
 
-/* Room Tabs Bar (Tối đa 5 phòng) */
 .room-tabs-bar {
     display: flex;
     align-items: center;
@@ -186,9 +185,17 @@ body {
 }
 
 @keyframes pulseBadge {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.15); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 .btn-add-tab {
@@ -275,6 +282,7 @@ body {
 .chat-box::-webkit-scrollbar {
     width: 6px;
 }
+
 .chat-box::-webkit-scrollbar-thumb {
     background-color: #bcc0c4;
     border-radius: 3px;
@@ -348,6 +356,7 @@ body {
     background-color: #e7f3ff;
     color: #1877f2;
 }
+
 #btn-match:hover:not(:disabled) {
     background-color: #dbeafe;
 }
@@ -356,6 +365,7 @@ body {
     background-color: #ffebe9;
     color: #d12929;
 }
+
 #btn-exit:hover:not(:disabled) {
     background-color: #ffdce0;
 }
@@ -482,6 +492,7 @@ body {
     gap: 8px;
     align-items: center;
 }
+
 .avatar-upload-group input {
     flex: 1;
 }
@@ -511,6 +522,7 @@ body {
     background-color: #0084ff;
     color: white;
 }
+
 .btn-accept:hover {
     background-color: #0073e6;
 }
@@ -519,6 +531,7 @@ body {
     background-color: #e4e6eb;
     color: #050505;
 }
+
 .btn-reject:hover {
     background-color: #d8dadf;
 }
@@ -539,6 +552,7 @@ body {
     align-items: center;
     justify-content: center;
 }
+
 .close-modal:hover {
     background-color: #f2f2f2;
 }
@@ -546,6 +560,7 @@ body {
 .mt-2 {
     margin-top: 8px;
 }
+
 .w-full {
     width: 100%;
 }
@@ -585,10 +600,12 @@ body {
     padding: 16px 20px;
     border-bottom: 1px solid #e4e6eb;
 }
+
 .sidebar-header h3 {
     font-size: 1.1rem;
     font-weight: 600;
 }
+
 .close-sidebar {
     background: none;
     border: none;
@@ -609,6 +626,7 @@ body {
     visibility: hidden;
     transition: opacity 0.3s;
 }
+
 .sidebar-overlay.active {
     opacity: 1;
     visibility: visible;
@@ -654,6 +672,7 @@ body {
     color: #050505;
     transition: background-color 0.2s;
 }
+
 .sidebar-item:hover {
     background-color: #f2f2f2;
 }

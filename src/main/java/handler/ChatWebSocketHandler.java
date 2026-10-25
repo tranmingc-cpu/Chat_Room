@@ -33,7 +33,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         userRooms.put(session.getId(), ConcurrentHashMap.newKeySet());
         System.out.println("User kết nối: " + session.getId());
     }
-
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
@@ -83,7 +82,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             if (roomId != null) {
                 leaveRoom(roomId, sessionId);
             } else {
-                // If no roomId passed, leave first room or all
                 java.util.Set<String> rooms = userRooms.get(sessionId);
                 if (rooms != null && !rooms.isEmpty()) {
                     String firstRoom = rooms.iterator().next();

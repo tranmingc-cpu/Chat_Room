@@ -17,19 +17,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class MatchmakingService {
 
     private final Queue<GuestSession> waitingQueue = new ConcurrentLinkedQueue<>();
-    
-    // Lưu trữ thông tin phòng dựa trên roomId
     private final Map<String, Room> activeRooms = new ConcurrentHashMap<>();
-    
-    // Lưu trữ ánh xạ từ sessionId (WebSocket ID) sang roomId
     private final Map<String, String> userRoomMap = new ConcurrentHashMap<>();
-    
-    // Lưu trữ lịch sử match để tránh match lại trong 12h: key = "clientId1:clientId2", value = timestamp
     private final Map<String, Instant> matchHistory = new ConcurrentHashMap<>();
-
     private static final int COOLDOWN_HOURS = 12;
     private static final int FALLBACK_WAIT_SECONDS = 10;
-
 
     public Room matchOrQueue(GuestSession user) {
         if (userRoomMap.containsKey(user.getId())) {
@@ -48,27 +40,25 @@ public class MatchmakingService {
         return null;
     }
 
-
     private synchronized Room findStrictMatch(GuestSession user) {
         Iterator<GuestSession> iterator = waitingQueue.iterator();
         while (iterator.hasNext()) {
             GuestSession candidate = iterator.next();
 
-            if (candidate.getClientId().equals(user.getClientId())) continue;
+            if (candidate.getClientId().equals(user.getClientId()))
+                continue;
             if (userRoomMap.containsKey(candidate.getId())) {
                 iterator.remove();
                 continue;
             }
-            if (hasMatchedRecently(user.getClientId(), candidate.getClientId())) continue;
-            
-            // Bắt buộc ngược giới tính
+            if (hasMatchedRecently(user.getClientId(), candidate.getClientId()))
+                continue;
             if (user.getGender() != null && candidate.getGender() != null &&
-                user.getGender().equalsIgnoreCase(candidate.getGender())) continue;
-
-            // Bắt buộc cùng thành phố
+                    user.getGender().equalsIgnoreCase(candidate.getGender()))
+                continue;
             if (user.getLocation() != null && candidate.getLocation() != null &&
-                user.getLocation().equalsIgnoreCase(candidate.getLocation())) {
-                
+                    user.getLocation().equalsIgnoreCase(candidate.getLocation())) {
+
                 waitingQueue.remove(candidate);
                 return createRoomAndRecordMatch(user, candidate);
             }
@@ -78,24 +68,21 @@ public class MatchmakingService {
 
     @Scheduled(fixedDelay = 5000)
     public synchronized void scheduledSweepQueue() {
-        if (waitingQueue.size() < 2) return;
+        if (waitingQueue.size() < 2)
+            return;
 
         Instant now = Instant.now();
         Iterator<GuestSession> iterator = waitingQueue.iterator();
 
         while (iterator.hasNext()) {
             GuestSession user = iterator.next();
-
-            // Nếu người này chưa đợi đủ 10 giây thì bỏ qua
-            if (user.getEnqueuedTime() == null || ChronoUnit.SECONDS.between(user.getEnqueuedTime(), now) < FALLBACK_WAIT_SECONDS) {
+            if (user.getEnqueuedTime() == null
+                    || ChronoUnit.SECONDS.between(user.getEnqueuedTime(), now) < FALLBACK_WAIT_SECONDS) {
                 continue;
             }
-
-            // Nếu đã chờ đủ lâu, đi tìm người match bất kể thành phố
             GuestSession matchCandidate = findFallbackMatch(user);
-            
+
             if (matchCandidate != null) {
-                // Đã tìm thấy, tạo phòng cho cả 2
                 iterator.remove();
                 waitingQueue.remove(matchCandidate);
                 createRoomAndRecordMatch(user, matchCandidate);
@@ -106,20 +93,22 @@ public class MatchmakingService {
     private GuestSession findFallbackMatch(GuestSession user) {
         Instant now = Instant.now();
         for (GuestSession candidate : waitingQueue) {
-            if (candidate.getId().equals(user.getId())) continue;
-            if (candidate.getClientId().equals(user.getClientId())) continue;
-            
-            // Người kia cũng phải chờ quá 10 giây mới lôi ra ghép
-            if (candidate.getEnqueuedTime() == null || ChronoUnit.SECONDS.between(candidate.getEnqueuedTime(), now) < FALLBACK_WAIT_SECONDS) {
+            if (candidate.getId().equals(user.getId()))
+                continue;
+            if (candidate.getClientId().equals(user.getClientId()))
+                continue;
+            if (candidate.getEnqueuedTime() == null
+                    || ChronoUnit.SECONDS.between(candidate.getEnqueuedTime(), now) < FALLBACK_WAIT_SECONDS) {
                 continue;
             }
 
-            if (userRoomMap.containsKey(candidate.getId())) continue;
-            if (hasMatchedRecently(user.getClientId(), candidate.getClientId())) continue;
-            
-            // Vẫn bắt buộc ngược giới tính
+            if (userRoomMap.containsKey(candidate.getId()))
+                continue;
+            if (hasMatchedRecently(user.getClientId(), candidate.getClientId()))
+                continue;
             if (user.getGender() != null && candidate.getGender() != null &&
-                user.getGender().equalsIgnoreCase(candidate.getGender())) continue;
+                    user.getGender().equalsIgnoreCase(candidate.getGender()))
+                continue;
 
             return candidate;
         }
@@ -131,22 +120,18 @@ public class MatchmakingService {
         activeRooms.put(room.getRoomId(), room);
         userRoomMap.put(user1.getId(), room.getRoomId());
         userRoomMap.put(user2.getId(), room.getRoomId());
-        
         recordMatch(user1.getClientId(), user2.getClientId());
-        
-        // Vì đây có thể do hàm Scheduled quét tự động tạo ra, 
-        // Controller của bạn có thể cần một cơ chế push (gửi message) qua WebSocket cho 2 user này 
-        // để báo rằng "Đã tìm thấy phòng"
-        
         return room;
     }
 
     public boolean acceptMatch(String sessionId) {
         String roomId = userRoomMap.get(sessionId);
-        if (roomId == null) return false;
-        
+        if (roomId == null)
+            return false;
+
         Room room = activeRooms.get(roomId);
-        if (room == null) return false;
+        if (room == null)
+            return false;
 
         if (room.getUser1().getId().equals(sessionId)) {
             room.setUser1Status(Room.UserStatus.ACCEPTED);
@@ -158,20 +143,22 @@ public class MatchmakingService {
 
     public Room declineMatch(String sessionId) {
         String roomId = userRoomMap.get(sessionId);
-        if (roomId == null) return null;
-        
-        Room room = activeRooms.remove(roomId); 
-        if (room == null) return null;
+        if (roomId == null)
+            return null;
+
+        Room room = activeRooms.remove(roomId);
+        if (room == null)
+            return null;
 
         if (room.getUser1().getId().equals(sessionId)) {
             room.setUser1Status(Room.UserStatus.DECLINED);
         } else if (room.getUser2().getId().equals(sessionId)) {
             room.setUser2Status(Room.UserStatus.DECLINED);
         }
-        
+
         userRoomMap.remove(room.getUser1().getId());
         userRoomMap.remove(room.getUser2().getId());
-        
+
         return room;
     }
 
@@ -204,8 +191,9 @@ public class MatchmakingService {
     private boolean hasMatchedRecently(String clientId1, String clientId2) {
         String key = generateMatchKey(clientId1, clientId2);
         Instant matchTime = matchHistory.get(key);
-        if (matchTime == null) return false;
-        
+        if (matchTime == null)
+            return false;
+
         long hoursElapsed = ChronoUnit.HOURS.between(matchTime, Instant.now());
         if (hoursElapsed < COOLDOWN_HOURS) {
             return true;

@@ -63,15 +63,12 @@ public class MatchingService {
             for (int j = i + 1; j < users.size(); j++) {
                 String u1 = users.get(i);
                 String u2 = users.get(j);
-
-                if (!waitingPool.contains(u1) || !waitingPool.contains(u2)) continue;
-
+                if (!waitingPool.contains(u1) || !waitingPool.contains(u2))
+                    continue;
                 if (hasJustMatched(u1, u2))
                     continue;
-
                 Map<String, String> info1 = infos.get(i);
                 Map<String, String> info2 = infos.get(j);
-
                 String gender1 = info1.getOrDefault("gender", "");
                 String gender2 = info2.getOrDefault("gender", "");
                 String loc1 = info1.getOrDefault("location", "");
@@ -88,7 +85,8 @@ public class MatchingService {
                 String u1 = users.get(i);
                 String u2 = users.get(j);
 
-                if (!waitingPool.contains(u1) || !waitingPool.contains(u2)) continue;
+                if (!waitingPool.contains(u1) || !waitingPool.contains(u2))
+                    continue;
 
                 if (hasJustMatched(u1, u2))
                     continue;
@@ -110,7 +108,8 @@ public class MatchingService {
                 String u1 = users.get(i);
                 String u2 = users.get(j);
 
-                if (!waitingPool.contains(u1) || !waitingPool.contains(u2)) continue;
+                if (!waitingPool.contains(u1) || !waitingPool.contains(u2))
+                    continue;
 
                 if (hasJustMatched(u1, u2))
                     continue;
