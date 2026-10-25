@@ -697,8 +697,8 @@ body {
 
 .message.partner.female {
     background-color: #ffe6ee;
-    color: #ff588c;
-    border: 1px solid #ffccd9;
+    color: rgb(255 0 204 / 0.82);
+    border: 1px solid #ff87c3;
 }
 
 body.theme-female {
@@ -714,7 +714,7 @@ body.theme-female .header-bar h2 {
 }
 
 body.theme-female .btn-add-tab:not(.searching) {
-    background: #ff28cb;
+    background: #f605c0;
     box-shadow: 0 2px 4px rgb(255 0 178 / 0.75);
 }
 
@@ -723,13 +723,13 @@ body.theme-female .btn-add-tab:not(.searching):hover {
 }
 
 body.theme-female .message.me {
-    background-color: #ff28cb;
+    background-color: #ff00bf;
     color: #ffffff;
 }
 
 body.theme-female #btn-match {
     background-color: #fce4ec;
-    color: rgb(233 30 192 / 0.84);
+    color: rgb(255 0 203 / 0.84);
 }
 
 body.theme-female #btn-match:hover:not(:disabled) {
