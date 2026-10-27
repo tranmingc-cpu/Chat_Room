@@ -17,22 +17,17 @@ public class UserController {
 
         this.chatUserRepository = chatUserRepository;
     }
-
-    
     @PostMapping("/api/users/register")
     public ResponseEntity<ChatUser> registerOrUpdateUser(@RequestBody ChatUser userRequest, jakarta.servlet.http.HttpServletRequest request) {
         String ip = request.getRemoteAddr();
         ChatUser savedUser;
-        
         Optional<ChatUser> existingUser = Optional.empty();
         if (userRequest.getId() != null) {
             existingUser = chatUserRepository.findById(userRequest.getId());
         }
-        
         if (existingUser.isEmpty()) {
             existingUser = chatUserRepository.findByIpAddress(ip);
         }
-
         if (existingUser.isPresent()) {
             ChatUser u = existingUser.get();
             if (userRequest.getName() != null && !userRequest.getName().isEmpty()) u.setName(userRequest.getName());
@@ -41,26 +36,19 @@ public class UserController {
             if (userRequest.getLocation() != null) u.setLocation(userRequest.getLocation());
             if (userRequest.getAvatar() != null) u.setAvatar(userRequest.getAvatar());
             u.setIpAddress(ip);
-            
             savedUser = chatUserRepository.save(u);
             return ResponseEntity.ok(savedUser);
         }
-        
         userRequest.setIpAddress(ip);
         savedUser = chatUserRepository.save(userRequest);
         return ResponseEntity.ok(savedUser);
     }
-    
-    // Kiểm tra xem user có bị ban không (trước khi cho phép chat)
     @GetMapping("/api/users/{id}/check-ban")
     public ResponseEntity<Boolean> checkBan(@PathVariable Long id) {
         return chatUserRepository.findById(id)
                 .map(user -> ResponseEntity.ok(user.isBanned()))
                 .orElse(ResponseEntity.ok(false));
     }
-
-
-    
     @GetMapping("/admin/api/users")
     public ResponseEntity<List<ChatUser>> getAllUsers() {
         return ResponseEntity.ok(chatUserRepository.findAll());

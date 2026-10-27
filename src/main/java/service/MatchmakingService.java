@@ -70,10 +70,8 @@ public class MatchmakingService {
     public synchronized void scheduledSweepQueue() {
         if (waitingQueue.size() < 2)
             return;
-
         Instant now = Instant.now();
         Iterator<GuestSession> iterator = waitingQueue.iterator();
-
         while (iterator.hasNext()) {
             GuestSession user = iterator.next();
             if (user.getEnqueuedTime() == null

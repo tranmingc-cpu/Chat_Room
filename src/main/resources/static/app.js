@@ -153,18 +153,27 @@ function handleServerEvent(data) {
         case 'MATCHED':
             isSearching = false;
             showLoadingOverlay(false);
-            renderRoomTabs();
-            pendingMatchData = data;
-            showModal(true);
-            if (data.partnerInfo) {
-                const modalDesc = document.querySelector("#match-modal p");
-                if (modalDesc) {
-                    const name = data.partnerInfo.name || "Người lạ";
-                    const age = data.partnerInfo.age ? `${data.partnerInfo.age}t` : "";
-                    const loc = data.partnerInfo.location || "";
-                    modalDesc.innerText = `Tìm thấy: ${name} ${age ? '(' + age + ')' : ''} ${loc ? 'ở ' + loc : ''}. Bạn có muốn trò chuyện?`;
-                }
+            if (data.roomId) {
+                const roomId = data.roomId;
+                const partnerInfo = data.partnerInfo || {};
+                const pName = partnerInfo.name || "Người lạ";
+                const pAge = partnerInfo.age ? `${partnerInfo.age} tuổi` : "";
+                const pLoc = partnerInfo.location || "";
+                const extraInfo = [pAge, pLoc].filter(Boolean).join(" • ");
+                const infoText = extraInfo ? ` (${extraInfo})` : "";
+
+                rooms[roomId] = {
+                    partnerInfo: partnerInfo,
+                    messages: [
+                        { kind: "match-banner", text: `Đã kết nối với ${pName}${infoText}! Hãy chào nhau nhé 👋` }
+                    ],
+                    unreadCount: 0
+                };
+                pendingMatchData = null;
+                switchRoom(roomId);
             }
+            renderRoomTabs();
+            updateControlsState();
             break;
 
         case 'CHAT':
@@ -448,6 +457,11 @@ function renderRoomTabs() {
             `;
         }
     }
+
+    const tabsContainer = document.getElementById("room-tabs-container");
+    if (tabsContainer) {
+        tabsContainer.style.display = roomIds.length > 0 ? "flex" : "none";
+    }
 }
 
 function renderChatBoxForActiveRoom() {
@@ -460,8 +474,8 @@ function renderChatBoxForActiveRoom() {
     const msgs = rooms[activeRoomId].messages || [];
     msgs.forEach(m => {
         const isPartnerMsg = (m.sender === "partner");
-        if (m.kind === "text" || m.kind === "system") {
-            appendMessage(m.text, m.sender || m.kind, isPartnerMsg && isFemalePartner);
+        if (m.kind === "text" || m.kind === "system" || m.kind === "match-banner") {
+            appendMessage(m.text, m.kind === "match-banner" ? "match-banner" : (m.sender || m.kind), isPartnerMsg && isFemalePartner);
         } else if (m.kind === "media") {
             appendMediaMessage(m.url, m.mediaType, m.sender, isPartnerMsg && isFemalePartner);
         }
@@ -500,7 +514,32 @@ function updateControlsState() {
     const isWsOpen = socket && socket.readyState === WebSocket.OPEN;
 
     if (btnMatch) {
-        btnMatch.disabled = !isWsOpen || isFull;
+        if (isSearching) {
+            btnMatch.disabled = false;
+            btnMatch.classList.add("searching");
+            btnMatch.title = "Đang tìm phòng... Bấm để hủy";
+            btnMatch.innerHTML = `
+                <svg class="spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="2" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="22"></line>
+                    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                    <line x1="2" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="22" y2="12"></line>
+                    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                    <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                </svg>
+                <span>Hủy tìm</span>
+            `;
+        } else {
+            btnMatch.classList.remove("searching");
+            btnMatch.disabled = !isWsOpen || isFull;
+            btnMatch.title = isFull ? "Đã đạt tối đa phòng chat" : "Tìm kiếm phòng chat mới";
+            btnMatch.innerHTML = `
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>Tìm phòng</span>
+            `;
+        }
     }
     if (btnExit) {
         btnExit.disabled = !activeRoomId;
@@ -586,10 +625,13 @@ async function uploadAndSendFile(event) {
     }
 }
 function displayPartnerInfo(info) {
+    const partnerCard = document.getElementById("partner-card");
     const avatarEl = document.getElementById("partner-avatar");
     const nameEl = document.getElementById("partner-name");
     const ageEl = document.getElementById("partner-age");
     const locationEl = document.getElementById("partner-location");
+
+    if (partnerCard) partnerCard.style.display = "flex";
 
     const defaultAvatar = "https://via.placeholder.com/150";
 
@@ -600,12 +642,14 @@ function displayPartnerInfo(info) {
 }
 
 function clearPartnerInfo() {
+    const partnerCard = document.getElementById("partner-card");
     const avatarEl = document.getElementById("partner-avatar");
     const nameEl = document.getElementById("partner-name");
     const ageEl = document.getElementById("partner-age");
     const locationEl = document.getElementById("partner-location");
     const indicator = document.getElementById("room-badge-indicator");
 
+    if (partnerCard) partnerCard.style.display = "none";
     if (avatarEl) avatarEl.src = "https://via.placeholder.com/150";
     if (nameEl) nameEl.innerText = "Chưa ghép đôi";
     if (ageEl) ageEl.innerText = "--";
@@ -667,8 +711,19 @@ function toggleChatInput(enable) {
     function appendMessage(msg, type, isFemalePartner) {
         const chatBox = document.getElementById("chat-box");
         const msgDiv = document.createElement("div");
-        msgDiv.className = `message ${type}${isFemalePartner ? ' female' : ''}`;
-        msgDiv.innerText = msg;
+        if (type === "match-banner") {
+            msgDiv.className = "message-match-banner";
+            msgDiv.innerHTML = `
+                <div class="match-banner-badge">
+                    <span class="match-banner-icon">✨</span>
+                    <span class="match-banner-title">Ghép đôi thành công!</span>
+                </div>
+                <div class="match-banner-text">${msg}</div>
+            `;
+        } else {
+            msgDiv.className = `message ${type}${isFemalePartner ? ' female' : ''}`;
+            msgDiv.innerText = msg;
+        }
         chatBox.appendChild(msgDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
@@ -680,24 +735,20 @@ function toggleChatInput(enable) {
             messages.forEach(msg => msg.remove());
         }
     }
-
     function handleKeyPress(e) {
         if (e.key === 'Enter') sendMessage();
     }
-
     async function uploadAvatarPreview(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const formData = new FormData();
         formData.append("file", file);
-
         try {
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData
             });
-
             if (response.ok) {
                 const data = await response.json();
                 const avatarInput = document.getElementById("guest-avatar");
@@ -714,7 +765,6 @@ function toggleChatInput(enable) {
             event.target.value = "";
         }
     }
-
     function updateUserProfileDisplay(profile) {
         const avatarEl = document.getElementById("my-avatar-display");
         const nameEl = document.getElementById("my-name-display");
@@ -724,15 +774,12 @@ function toggleChatInput(enable) {
         if (nameEl) {
             nameEl.innerText = profile.name || "Người lạ";
         }
-
-        // Tự động chuyển giao diện sang tone hồng nếu người dùng là Nữ
         if (profile.gender === "nu" || profile.gender === "female") {
             document.body.classList.add("theme-female");
         } else {
             document.body.classList.remove("theme-female");
         }
     }
-
     function openProfileModal() {
         const modal = document.getElementById("guest-modal");
         if (modal) {
@@ -773,11 +820,8 @@ function toggleChatInput(enable) {
                 const data = await response.json();
                 currentUserId = data.id.toString();
                 localStorage.setItem("chatUserId", currentUserId);
-
-                // Nếu bị ban
                 if (data.banned) {
                     alert("Tài khoản của bạn đã bị cấm chat!");
-                    // Có thể disable nút tìm kiếm ở đây
                 }
             }
         } catch (e) {
@@ -859,6 +903,9 @@ function toggleChatInput(enable) {
             if (activeRoomId && rooms[activeRoomId]) {
                 switchRoom(activeRoomId);
             }
+        } else {
+            clearPartnerInfo();
+            renderRoomTabs();
         }
 
         loadProvinces();

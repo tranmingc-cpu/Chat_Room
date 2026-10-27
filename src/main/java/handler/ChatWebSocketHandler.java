@@ -196,7 +196,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
         System.out.println("WebSocket ngắt kết nối session: " + sessionId + " (client: " + clientId + ")");
     }
-
     private synchronized void tryMatch() throws IOException {
         String[] matchedUsers;
         while ((matchedUsers = matchingService.matchUsers()) != null) {

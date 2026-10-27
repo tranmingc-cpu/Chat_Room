@@ -26,18 +26,15 @@ public class FileUploadController {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("Vui lòng chọn file!");
         }
-
         long maxSizeInBytes = 10 * 1024 * 1024;
         if (file.getSize() > maxSizeInBytes) {
             return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                     .body("File vượt quá 10MB!");
         }
-
         String contentType = file.getContentType();
         if (contentType == null || (!contentType.startsWith("image/") && !contentType.startsWith("video/"))) {
             return ResponseEntity.badRequest().body("Chỉ chấp nhận định dạng file Ảnh hoặc Video!");
         }
-
         try {
             String resourceType = contentType.startsWith("video/") ? "video" : "image";
             Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(

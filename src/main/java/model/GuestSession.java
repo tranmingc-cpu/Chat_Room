@@ -11,8 +11,6 @@ public class  GuestSession {
     private int age;
     private String gender;
     private String location;
-    
-    // Lưu thời gian bắt đầu vào hàng đợi
     private Instant enqueuedTime;
 
     public GuestSession(String clientId, WebSocketSession session, String name, int age, String gender, String location) {
@@ -25,8 +23,6 @@ public class  GuestSession {
         this.location = location != null ? location : "Toàn quốc";
         this.enqueuedTime = null;
     }
-
-    // Getters và Setters
     public String getClientId() { return clientId; }
     public String getId() { return id; }
     public WebSocketSession getSession() { return session; }
@@ -34,7 +30,7 @@ public class  GuestSession {
     public int getAge() { return age; }
     public String getGender() { return gender; }
     public String getLocation() { return location; }
-    
     public Instant getEnqueuedTime() { return enqueuedTime; }
-    public void setEnqueuedTime(Instant enqueuedTime) { this.enqueuedTime = enqueuedTime; }
+    public void setEnqueuedTime(Instant enqueuedTime) { this.enqueuedTime = enqueuedTime;
+    }
 }

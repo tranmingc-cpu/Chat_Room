@@ -6,22 +6,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Random Chat Web</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
     <meta name="google-site-verification" content="QnVJKCwpk164-w1gNVySzjhUfzazQYwyXGZ6iwYT-2w" />
     <link rel="icon" type="image/png" href="/favicon.png">
-
     <meta property="og:title" content="QuanQueOnline">
     <meta property="og:image" content="https://www.quanqueonline.id.vn/logo.png">
     <meta property="og:type" content="website">
 </head>
-
 <body>
     <div class="chat-container">
         <div class="header-bar">
-            <h2>Room Chat</h2>
-            <button onclick="toggleSidebar()">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-            </button>
+            <div class="header-left">
+                <button id="btn-match" class="btn-header btn-header-match" onclick="findMatch()" title="Tìm kiếm phòng chat mới">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <span>Tìm phòng</span>
+                </button>
+            </div>
+            <div class="header-center">
+                <h2>Room Chat</h2>
+            </div>
+            <div class="header-right">
+                <button id="btn-exit" class="btn-header btn-header-exit" onclick="exitAndFindNew()" disabled title="Thoát phòng chat hiện tại">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    <span>Thoát</span>
+                </button>
+                <button class="btn-menu" onclick="toggleSidebar()" title="Menu">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+            </div>
         </div>
 
         <div id="sidebar-overlay" class="sidebar-overlay hidden" onclick="toggleSidebar()"></div>
@@ -47,21 +59,16 @@
                 <span class="icon">🚪</span> <span>Thoát trò chuyện</span>
             </div>
         </div>
-
         <div id="status" class="status-box" style="display: none;">Đang kết nối...</div>
-
-        <!-- Thanh danh sách các phòng chat đồng thời (Tối đa 5 phòng) -->
-        <div id="room-tabs-container" class="room-tabs-bar">
+        <div id="room-tabs-container" class="room-tabs-bar" style="display: none;">
             <div id="room-tabs-list" class="room-tabs-list">
-                <!-- Các tab sẽ được sinh tự động tại đây -->
             </div>
             <button id="btn-add-room" class="btn-add-tab" onclick="findMatch()" title="Tìm kiếm thêm người bạn mới (tối đa 5 phòng)">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 <span>Tìm thêm bạn</span>
             </button>
         </div>
-
-        <div id="partner-card">
+        <div id="partner-card" style="display: none;">
             <img id="partner-avatar" src="https://via.placeholder.com/150" alt="Avatar" />
             <div class="partner-info">
                 <h4 id="partner-name">Chưa ghép đôi</h4>
@@ -73,24 +80,22 @@
                 <span class="badge-text" id="active-room-tag">Phòng 1</span>
             </div>
         </div>
-
         <div id="guest-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <h3>👋 Nhập thông tin để tìm bạn</h3>
+                <button onclick="document.getElementById('alert-box').style.display='none'" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #721c24;">&times;
+                </button>
                 <div class="avatar-preview-container" style="text-align: center; margin-bottom: 15px;">
                     <img id="guest-avatar-preview" src="https://via.placeholder.com/150" alt="Avatar Preview" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #e4e6eb; cursor: pointer;" onclick="document.getElementById('guest-avatar-file').click()" title="Nhấn để tải ảnh lên">
                 </div>
                 <input type="text" id="guest-name" placeholder="Nhập biệt danh của bạn" />
-
                 <input type="text" id="guest-age" inputmode="numeric" pattern="[0-9]*"
                     placeholder="Nhập tuổi của bạn" />
-
                 <select id="guest-gender">
                     <option value="nam">Nam</option>
                     <option value="nu">Nữ</option>
                     <option value="khac">Khác</option>
                 </select>
-
                 <select id="guest-location">
                     <option value="">-- Chọn Tỉnh/Thành --</option>
                 </select>
@@ -104,19 +109,7 @@
                 <button class="btn-accept w-full mt-2" onclick="saveGuestProfile()">Bắt đầu Chat ngay</button>
             </div>
         </div>
-
         <div id="chat-box" class="chat-box">
-            <div id="match-modal" class="modal-overlay hidden">
-                <div class="modal-content">
-                    <h3>✨ Đã tìm thấy bạn chat!</h3>
-                    <p>Bạn có muốn bắt đầu trò chuyện với người này không?</p>
-                    <div class="modal-actions">
-                        <button class="btn-accept" onclick="acceptMatch()">Đồng ý</button>
-                        <button class="btn-reject" onclick="rejectMatch()">Từ chối</button>
-                    </div>
-                </div>
-            </div>
-
             <div id="loading-overlay" class="modal-overlay hidden">
                 <div class="modal-content loading-content">
                     <img src="cat-loading.jpg" alt="Sleeping Cat" class="sleeping-cat-icon">
@@ -129,7 +122,7 @@
                 <div class="modal-content exit-room-content">
                     <button class="close-modal" onclick="closeFindRoomOverlay()">&times;</button>
                     <h3>Bạn đã thoát phòng</h3>
-                    <p>Vui lòng tìm người bạn mới để tiếp tục trò chuyện.</p>
+                    <p>Tìm người bạn mới để tiếp tục trò chuyện.</p>
                     <div class="modal-actions">
                         <button class="btn-accept" onclick="startFindMatch()">🔍 Tìm phòng mới</button>
                         <button class="btn-reject" onclick="closeFindRoomOverlay()">Đóng</button>
@@ -137,18 +130,6 @@
                 </div>
             </div>
         </div>
-
-        <div class="controls">
-            <button id="btn-match" onclick="findMatch()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                Tìm Room
-            </button>
-            <button id="btn-exit" onclick="exitAndFindNew()" disabled>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                Thoát
-            </button>
-        </div>
-
         <div class="input-group">
             <input type="file" id="file-input" accept="image/*,video/*" style="display: none;"
                 onchange="uploadAndSendFile(event)">
@@ -161,9 +142,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
         </div>
-
     </div>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
 </body>
-
 </html>

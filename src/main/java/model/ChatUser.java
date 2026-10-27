@@ -6,35 +6,25 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "chat_users")
 public class ChatUser {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String name;
     private String age;
     private String gender;
     private String location;
-    
     @Column(length = 1000)
     private String avatar;
-
     private String ipAddress;
-
     private boolean isBanned = false;
-
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public ChatUser() {
     }
-
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-
     public String getIpAddress() { return ipAddress; }
     public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
-
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
