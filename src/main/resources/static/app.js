@@ -6,6 +6,37 @@ if (!clientUuid) {
     clientUuid = 'c_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
     localStorage.setItem('chatClientUuid', clientUuid);
 }
+
+// Tự động đảm bảo user có ID trong hệ thống
+async function ensureUserId() {
+    if (!currentUserId) {
+        try {
+            const res = await fetch('/api/users/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    name: "Người lạ",
+                    gender: "khac"
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                currentUserId = data.id.toString();
+                localStorage.setItem("chatUserId", currentUserId);
+                const userIdEl = document.getElementById('user-id');
+                if (userIdEl) userIdEl.innerText = currentUserId;
+                const nameDisplay = document.getElementById('my-name-display');
+                if (nameDisplay && (!nameDisplay.innerText || nameDisplay.innerText === "Người lạ")) {
+                    nameDisplay.innerText = `Người lạ #${currentUserId}`;
+                }
+            }
+        } catch (e) {
+            console.error("Lỗi khởi tạo ID người dùng:", e);
+        }
+    }
+}
+ensureUserId();
+
 const MAX_ROOMS = 5;
 let rooms = {};
 let activeRoomId = null;
@@ -49,7 +80,7 @@ function getUserInfo() {
     return {
         id: currentUserId,
         avatar: document.getElementById("guest-avatar")?.value || "https://via.placeholder.com/150",
-        name: document.getElementById("guest-name")?.value.trim() || "Người lạ",
+        name: document.getElementById("guest-name")?.value.trim() || (currentUserId ? ("Người lạ #" + currentUserId) : "Người lạ"),
         age: document.getElementById("guest-age")?.value || "N/A",
         location: document.getElementById("guest-location")?.value || "Không xác định",
         gender: document.getElementById("guest-gender")?.value || "khác"
@@ -201,14 +232,6 @@ function handleServerEvent(data) {
 async function findMatch() {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
         alert("Chưa kết nối đến máy chủ. Vui lòng đợi trong giây lát!");
-        return;
-    }
-
-    // Nếu người dùng chưa có profile hoặc chưa nhập biệt danh, bắt buộc mở form thông tin trước
-    if (!hasCompletedProfile()) {
-        openProfileModal(true, () => {
-            findMatch();
-        });
         return;
     }
 
@@ -980,12 +1003,11 @@ function toggleChatInput(enable) {
 
     async function saveGuestProfileAndProceed() {
         const nameInput = document.getElementById("guest-name");
-        const nameVal = nameInput ? nameInput.value.trim() : "";
+        let nameVal = nameInput ? nameInput.value.trim() : "";
 
+        // Nếu người dùng không nhập tên, tự động đặt tên theo ID người dùng
         if (!nameVal) {
-            alert("Vui lòng nhập Biệt danh / Tên hiển thị của bạn!");
-            if (nameInput) nameInput.focus();
-            return;
+            nameVal = currentUserId ? `Người lạ #${currentUserId}` : "Người lạ";
         }
 
         const profile = {
@@ -1036,8 +1058,6 @@ function toggleChatInput(enable) {
             callback();
         }
     }
-
-    // Giữ tương thích nếu có lời gọi cũ
     async function saveGuestProfile() {
         return saveGuestProfileAndProceed();
     }
@@ -1097,13 +1117,11 @@ function toggleChatInput(enable) {
             }
         } catch (e) {
         }
-
         if (!hasProfile) {
             setTimeout(() => {
                 openProfileModal(true);
             }, 300);
         }
-
         const guestAvatarInput = document.getElementById("guest-avatar");
         if (guestAvatarInput) {
             guestAvatarInput.addEventListener("input", function (e) {

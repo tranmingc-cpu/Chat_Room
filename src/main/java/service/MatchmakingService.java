@@ -20,7 +20,7 @@ public class MatchmakingService {
     private final Map<String, Room> activeRooms = new ConcurrentHashMap<>();
     private final Map<String, String> userRoomMap = new ConcurrentHashMap<>();
     private final Map<String, Instant> matchHistory = new ConcurrentHashMap<>();
-    private static final int COOLDOWN_HOURS = 12;
+    private static final double COOLDOWN_HOURS = 1.5;
     private static final int FALLBACK_WAIT_SECONDS = 10;
 
     public Room matchOrQueue(GuestSession user) {

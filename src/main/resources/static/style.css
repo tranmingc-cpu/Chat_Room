@@ -6,17 +6,16 @@
 }
 
 body {
-    background-color: #eef2f6;
+    background-color: #f0f2f5;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
     color: #1c1e21;
     overflow: hidden;
 }
 
-/* Khung chat mặc định (Mobile first: full màn hình) */
 .chat-container {
     width: 100%;
     max-width: 100%;
@@ -27,35 +26,6 @@ body {
     height: 100dvh;
     position: relative;
     overflow: hidden;
-}
-
-/* Định dạng riêng biệt dành cho LAPTOP / MÁY TÍNH (Desktop Format) */
-@media (min-width: 900px) {
-    body {
-        background: radial-gradient(circle at 50% 20%, #eef5fc 0%, #e2e8f0 100%);
-        padding: 20px 0;
-    }
-
-    .chat-container {
-        width: 92%;
-        max-width: 980px;
-        height: 92vh;
-        height: 92dvh;
-        border-radius: 20px;
-        box-shadow: 0 16px 40px -8px rgba(15, 23, 42, 0.12), 0 0 1px 1px rgba(15, 23, 42, 0.06);
-        border: 1px solid rgba(226, 232, 240, 0.9);
-        overflow: hidden;
-    }
-
-    /* Tối ưu tin nhắn trên màn hình rộng */
-    .message {
-        max-width: 65%;
-    }
-
-    .input-group {
-        padding: 14px 24px;
-        gap: 12px;
-    }
 }
 
 .header-bar {
