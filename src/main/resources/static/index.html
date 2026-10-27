@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Random Chat Web</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=7">
     <meta name="google-site-verification" content="QnVJKCwpk164-w1gNVySzjhUfzazQYwyXGZ6iwYT-2w" />
     <link rel="icon" type="image/png" href="/favicon.png">
     <meta property="og:title" content="QuanQueOnline">
@@ -23,7 +23,17 @@
                 </button>
             </div>
             <div class="header-center">
-                <h2>Room Chat</h2>
+                <div class="brand-title">
+                    <span class="brand-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            <circle cx="9" cy="10" r="1" fill="currentColor"></circle>
+                            <circle cx="12" cy="10" r="1" fill="currentColor"></circle>
+                            <circle cx="15" cy="10" r="1" fill="currentColor"></circle>
+                        </svg>
+                    </span>
+                    <h2>Room Chat</h2>
+                </div>
             </div>
             <div class="header-right">
                 <button id="btn-exit" class="btn-header btn-header-exit" onclick="exitAndFindNew()" disabled title="Thoát phòng chat hiện tại">
@@ -39,24 +49,68 @@
         <div id="sidebar-overlay" class="sidebar-overlay hidden" onclick="toggleSidebar()"></div>
         <div id="sidebar-menu" class="sidebar">
             <div class="sidebar-header">
-                <h3>Menu</h3>
-                <button class="close-sidebar" onclick="toggleSidebar()">&times;</button>
+                <div class="sidebar-brand-box">
+                    <img src="/favicon.png" alt="Logo" class="sidebar-brand-logo" onerror="this.src='https://www.quanqueonline.id.vn/logo.png'">
+                    <div class="sidebar-brand-texts">
+                        <h3>QuanQueOnline</h3>
+                        <span>Room Chat Random</span>
+                    </div>
+                </div>
+                <button class="close-sidebar" onclick="toggleSidebar()" aria-label="Đóng menu" title="Đóng menu">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
-            <div class="sidebar-item">
-                <span class="icon">👤</span> <span>ID: <span id="user-id">---</span></span>
+
+            <!-- Profile Summary Card in Menu -->
+            <div class="sidebar-profile-card" onclick="openProfileModal(); toggleSidebar();">
+                <div class="sidebar-avatar-wrap">
+                    <img id="my-avatar-display" src="https://via.placeholder.com/150" alt="Avatar">
+                    <span class="status-indicator-dot" title="Trực tuyến"></span>
+                </div>
+                <div class="sidebar-profile-meta">
+                    <div class="sidebar-profile-name" id="my-name-display">Người lạ</div>
+                    <div class="sidebar-profile-id">ID: <span id="user-id">---</span></div>
+                </div>
+                <div class="sidebar-edit-badge">Sửa</div>
             </div>
-            <!--<div class="sidebar-item" onclick="openProfileModal(); toggleSidebar();">
-                <span class="icon">⚙️</span> <span>Cài đặt</span>
-            </div> -->
-            <div class="sidebar-item" onclick="openProfileModal(); toggleSidebar();">
-                <span class="icon">ℹ️</span> <span>Thông tin</span>
+
+            <div class="sidebar-nav">
+                <div class="sidebar-section-label">Hồ sơ cá nhân</div>
+                <div class="sidebar-item" onclick="openProfileModal(); toggleSidebar();">
+                    <div class="sidebar-item-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </div>
+                    <div class="sidebar-item-text">
+                        <span>Thông tin của tôi</span>
+                        <small>Cập nhật biệt danh, ảnh đại diện</small>
+                    </div>
+                </div>
+
+                <div class="sidebar-section-label">Hỗ trợ & Quản lý</div>
+                <div class="sidebar-item" onclick="alert('Tính năng báo xấu đang được phát triển'); toggleSidebar();">
+                    <div class="sidebar-item-icon warning-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    </div>
+                    <div class="sidebar-item-text">
+                        <span>Báo xấu người dùng</span>
+                        <small>Báo cáo vi phạm hoặc quấy rối</small>
+                    </div>
+                </div>
+
+                <div class="sidebar-item danger-item" id="menu-exit-room" style="display: none;"
+                    onclick="exitAndFindNew(); toggleSidebar();">
+                    <div class="sidebar-item-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    </div>
+                    <div class="sidebar-item-text">
+                        <span>Thoát phòng hiện tại</span>
+                        <small>Kết thúc cuộc trò chuyện đang mở</small>
+                    </div>
+                </div>
             </div>
-            <div class="sidebar-item" onclick="alert('Tính năng đang phát triển'); toggleSidebar();">
-                <span class="icon">⚠️</span> <span>Báo Xấu</span>
-            </div>
-            <div class="sidebar-item" id="menu-exit-room" style="display: none;"
-                onclick="exitAndFindNew(); toggleSidebar();">
-                <span class="icon">🚪</span> <span>Thoát trò chuyện</span>
+
+            <div class="sidebar-footer">
+                <span>QuanQueOnline Chat • v1.2</span>
             </div>
         </div>
         <div id="status" class="status-box" style="display: none;">Đang kết nối...</div>
@@ -81,32 +135,57 @@
             </div>
         </div>
         <div id="guest-modal" class="modal-overlay hidden">
-            <div class="modal-content">
-                <h3>👋 Nhập thông tin để tìm bạn</h3>
-                <button onclick="document.getElementById('alert-box').style.display='none'" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #721c24;">&times;
+            <div class="modal-content profile-modal-content">
+                <button class="close-modal" id="btn-close-guest-modal" onclick="closeProfileModal()" title="Tắt form (X)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
-                <div class="avatar-preview-container" style="text-align: center; margin-bottom: 15px;">
-                    <img id="guest-avatar-preview" src="https://via.placeholder.com/150" alt="Avatar Preview" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #e4e6eb; cursor: pointer;" onclick="document.getElementById('guest-avatar-file').click()" title="Nhấn để tải ảnh lên">
+                <div class="modal-header-section">
+                    <h3 id="guest-modal-title">👋 Nhập thông tin để tìm bạn</h3>
+                    <p id="guest-modal-subtitle">Hãy cho đối phương biết bạn là ai trước khi ghép đôi nhé!</p>
                 </div>
-                <input type="text" id="guest-name" placeholder="Nhập biệt danh của bạn" />
-                <input type="text" id="guest-age" inputmode="numeric" pattern="[0-9]*"
-                    placeholder="Nhập tuổi của bạn" />
-                <select id="guest-gender">
-                    <option value="nam">Nam</option>
-                    <option value="nu">Nữ</option>
-                    <option value="khac">Khác</option>
-                </select>
-                <select id="guest-location">
-                    <option value="">-- Chọn Tỉnh/Thành --</option>
-                </select>
+                <div class="avatar-preview-container">
+                    <div class="avatar-preview-wrapper" onclick="document.getElementById('guest-avatar-file').click()" title="Nhấn để đổi ảnh">
+                        <img id="guest-avatar-preview" src="https://via.placeholder.com/150" alt="Avatar Preview">
+                        <div class="avatar-overlay-cam">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group-field">
+                    <label for="guest-name">Biệt danh / Tên hiển thị <span style="color:#e53935;">*</span></label>
+                    <input type="text" id="guest-name" placeholder="Ví dụ: Hoàng Long, Bé Miu..." required />
+                </div>
+                <div class="form-row-2">
+                    <div class="form-group-field">
+                        <label for="guest-age">Tuổi</label>
+                        <input type="text" id="guest-age" inputmode="numeric" pattern="[0-9]*" placeholder="VD: 20" />
+                    </div>
+                    <div class="form-group-field">
+                        <label for="guest-gender">Giới tính</label>
+                        <select id="guest-gender">
+                            <option value="nam">Nam</option>
+                            <option value="nu">Nữ</option>
+                            <option value="khac">Khác</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group-field">
+                    <label for="guest-location">Tỉnh / Thành phố</label>
+                    <select id="guest-location">
+                        <option value="">-- Chọn Tỉnh/Thành --</option>
+                    </select>
+                </div>
                 <div class="avatar-upload-group">
-                    <input type="text" id="guest-avatar" placeholder="Link ảnh Avatar" />
+                    <input type="text" id="guest-avatar" placeholder="Link ảnh đại diện (URL tuỳ chọn)..." />
                     <input type="file" id="guest-avatar-file" accept="image/*" style="display: none;"
                         onchange="uploadAvatarPreview(event)">
                     <button type="button" class="btn-reject"
-                        onclick="document.getElementById('guest-avatar-file').click()">Tải ảnh</button>
+                        onclick="document.getElementById('guest-avatar-file').click()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Tải ảnh
+                    </button>
                 </div>
-                <button class="btn-accept w-full mt-2" onclick="saveGuestProfile()">Bắt đầu Chat ngay</button>
+                <button class="btn-accept w-full mt-2" id="guest-submit-btn" onclick="saveGuestProfileAndProceed()">Lưu & Bắt đầu</button>
             </div>
         </div>
         <div id="chat-box" class="chat-box">
@@ -143,6 +222,6 @@
             </button>
         </div>
     </div>
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=13"></script>
 </body>
 </html>

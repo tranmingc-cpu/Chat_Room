@@ -56,14 +56,51 @@ body {
 
 .header-center {
     flex: 1;
-    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.brand-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(0, 112, 243, 0.06) 0%, rgba(121, 40, 202, 0.06) 100%);
+    border: 1px solid rgba(0, 112, 243, 0.12);
+    user-select: none;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s;
+}
+
+.brand-title:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 112, 243, 0.12);
+}
+
+.brand-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #0070f3 0%, #7928ca 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 112, 243, 0.35);
+    flex-shrink: 0;
+}
+
+.brand-icon svg {
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.15));
 }
 
 .header-bar h2 {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: #1a1d20;
     letter-spacing: -0.2px;
+    margin: 0;
 }
 
 .btn-header {
@@ -699,23 +736,28 @@ body {
 
 .close-modal {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    background: none;
+    top: 14px;
+    right: 14px;
+    background: #f1f5f9;
     border: none;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
+    line-height: 1;
     cursor: pointer;
-    color: #65676b;
-    width: 30px;
-    height: 30px;
+    color: #64748b;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 5;
 }
 
 .close-modal:hover {
-    background-color: #f2f2f2;
+    background-color: #fee2e2;
+    color: #ef4444;
+    transform: rotate(90deg) scale(1.05);
 }
 
 .mt-2 {
@@ -738,13 +780,13 @@ body {
 .sidebar {
     position: fixed;
     top: 0;
-    right: -350px;
-    width: 350px;
-    max-width: 80%;
+    right: -420px;
+    width: 380px;
+    max-width: 90%;
     height: 100vh;
-    background-color: #ffffff;
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
-    transition: right 0.3s ease;
+    background: #ffffff;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.12);
+    transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 1000;
     display: flex;
     flex-direction: column;
@@ -758,21 +800,64 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid #e4e6eb;
+    padding: 18px 22px;
+    border-bottom: 1px solid #f0f2f5;
+    background: #ffffff;
 }
 
-.sidebar-header h3 {
-    font-size: 1.1rem;
+.sidebar-brand-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar-brand-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0, 112, 243, 0.25);
+    background: #ffffff;
+}
+
+.sidebar-brand-texts {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-brand-texts h3 {
+    font-size: 1.12rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+}
+
+.sidebar-brand-texts span {
+    font-size: 0.75rem;
+    color: #0070f3;
     font-weight: 600;
 }
 
 .close-sidebar {
-    background: none;
+    background: #f1f5f9;
     border: none;
-    font-size: 1.5rem;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     cursor: pointer;
-    color: #65676b;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.close-sidebar:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    transform: rotate(90deg);
 }
 
 .sidebar-overlay {
@@ -781,11 +866,12 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.4);
+    background-color: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
     z-index: 999;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s;
+    transition: all 0.25s ease;
 }
 
 .sidebar-overlay.active {
@@ -793,38 +879,279 @@ body {
     visibility: visible;
 }
 
-.sidebar-profile {
+/* Sidebar Profile Card */
+.sidebar-profile-card {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    padding: 24px 20px;
-    border-bottom: 1px solid #e4e6eb;
+    gap: 12px;
+    padding: 16px 20px;
+    margin: 12px 16px 8px 16px;
+    background: linear-gradient(135deg, #f8faff 0%, #edf3ff 100%);
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-profile-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 112, 243, 0.12);
+    border-color: #bfdbfe;
+}
+
+.sidebar-avatar-wrap {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
 }
 
 #my-avatar-display {
-    width: 100px;
-    height: 100px;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     object-fit: cover;
-    margin-bottom: 12px;
-    border: 3px solid #0084ff;
+    border: 2px solid #0070f3;
     background-color: #e4e6eb;
 }
 
-.my-name {
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: #050505;
+.status-indicator-dot {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    width: 11px;
+    height: 11px;
+    background-color: #10b981;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
 }
 
-.my-id {
-    color: #65676b;
-    font-size: 1rem;
-    margin-top: 4px;
+.sidebar-profile-meta {
+    flex: 1;
+    overflow: hidden;
+}
+
+.sidebar-profile-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1a1d20;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-profile-id {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.sidebar-edit-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #0070f3;
+    background: #ffffff;
+    padding: 3px 8px;
+    border-radius: 10px;
+    border: 1px solid #bfdbfe;
+}
+
+.sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px;
+}
+
+.sidebar-section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin: 14px 4px 6px 4px;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    user-select: none;
+    margin-bottom: 4px;
 }
 
 .sidebar-item:hover {
-    background-color: #f2f2f2;
+    background-color: #f1f5f9;
+}
+
+.sidebar-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background-color: #f0f4ff;
+    color: #0070f3;
+    flex-shrink: 0;
+}
+
+.sidebar-item-icon.warning-icon {
+    background-color: #fff7ed;
+    color: #ea580c;
+}
+
+.sidebar-item.danger-item .sidebar-item-icon {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+.sidebar-item-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-item-text span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.sidebar-item-text small {
+    font-size: 0.74rem;
+    color: #64748b;
+    margin-top: 1px;
+}
+
+.sidebar-footer {
+    padding: 14px 20px;
+    border-top: 1px solid #f0f2f5;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-align: center;
+}
+
+/* Modal Form Styles */
+.profile-modal-content {
+    max-width: 420px;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+}
+
+.modal-header-section {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.modal-header-section h3 {
+    font-size: 1.22rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+
+.modal-header-section p {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.avatar-preview-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.avatar-preview-wrapper {
+    position: relative;
+    width: 86px;
+    height: 86px;
+    border-radius: 50%;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 3px solid #0070f3;
+}
+
+#guest-avatar-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.avatar-overlay-cam {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.avatar-preview-wrapper:hover .avatar-overlay-cam {
+    opacity: 1;
+}
+
+.form-group-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 12px;
+}
+
+.form-group-field label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.modal-content input,
+.modal-content select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #1e293b;
+    background: #f8fafc;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.modal-content input:focus,
+.modal-content select:focus {
+    background: #ffffff;
+    border-color: #0070f3;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.12);
+}
+
+#guest-submit-btn {
+    padding: 11px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #0070f3 0%, #0056b3 100%);
+    box-shadow: 0 4px 12px rgba(0, 112, 243, 0.25);
+    margin-top: 6px;
+}
+
+#guest-submit-btn:hover {
+    box-shadow: 0 6px 16px rgba(0, 112, 243, 0.35);
+    transform: translateY(-1px);
 }
 
 .message.partner.female {

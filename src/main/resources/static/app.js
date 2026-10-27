@@ -203,6 +203,15 @@ async function findMatch() {
         return;
     }
 
+    // Nếu người dùng chưa có profile hoặc chưa nhập biệt danh, bắt buộc mở form thông tin trước
+    if (!hasCompletedProfile()) {
+        openProfileModal(true, () => {
+            // Callback sau khi lưu form xong sẽ tự động tiếp tục tìm phòng
+            findMatch();
+        });
+        return;
+    }
+
     // Nếu đang tìm kiếm và người dùng bấm lại nút "Tìm thêm bạn", hủy tìm kiếm
     if (isSearching) {
         cancelSearch();
@@ -780,29 +789,81 @@ function toggleChatInput(enable) {
             document.body.classList.remove("theme-female");
         }
     }
-    function openProfileModal() {
+
+    let profileSuccessCallback = null;
+
+    function hasCompletedProfile() {
+        try {
+            const savedProfile = localStorage.getItem("chatProfile");
+            if (savedProfile) {
+                const profile = JSON.parse(savedProfile);
+                if (profile && profile.name && profile.name.trim().length > 0 && profile.name.trim() !== "Người lạ") {
+                    return true;
+                }
+            }
+        } catch (e) {}
+        return false;
+    }
+
+    function openProfileModal(isRequired = false, onSavedCallback = null) {
+        profileSuccessCallback = onSavedCallback;
         const modal = document.getElementById("guest-modal");
-        if (modal) {
-            modal.classList.remove("hidden");
-            const title = modal.querySelector("h3");
-            if (title) title.innerText = "Hồ sơ của bạn";
-            const btn = modal.querySelector(".btn-accept");
-            if (btn) btn.innerText = "Lưu thông tin";
+        if (!modal) return;
+
+        modal.classList.remove("hidden");
+        const titleEl = document.getElementById("guest-modal-title");
+        const subtitleEl = document.getElementById("guest-modal-subtitle");
+        const submitBtn = document.getElementById("guest-submit-btn");
+        const closeBtn = document.getElementById("btn-close-guest-modal");
+
+        if (isRequired) {
+            if (titleEl) titleEl.innerText = "👋 Bạn là người mới!";
+            if (subtitleEl) subtitleEl.innerText = "Vui lòng nhập tên/biệt danh để bắt đầu tìm phòng chat:";
+            if (submitBtn) submitBtn.innerText = "Lưu & Tiếp tục tìm bạn";
+            if (closeBtn) {
+                closeBtn.style.display = "flex";
+                closeBtn.title = "Đóng";
+            }
+        } else {
+            if (titleEl) titleEl.innerText = "Hồ sơ của bạn";
+            if (subtitleEl) subtitleEl.innerText = "Cập nhật thông tin hiển thị với mọi người";
+            if (submitBtn) submitBtn.innerText = "Lưu thay đổi";
+            if (closeBtn) {
+                closeBtn.style.display = "flex";
+                closeBtn.title = "Đóng";
+            }
+        }
+
+        const nameInput = document.getElementById("guest-name");
+        if (nameInput) {
+            setTimeout(() => nameInput.focus(), 150);
         }
     }
 
-    async function saveGuestProfile() {
+    function closeProfileModal() {
         const modal = document.getElementById("guest-modal");
         if (modal) {
             modal.classList.add("hidden");
         }
+        profileSuccessCallback = null;
+    }
+
+    async function saveGuestProfileAndProceed() {
+        const nameInput = document.getElementById("guest-name");
+        const nameVal = nameInput ? nameInput.value.trim() : "";
+
+        if (!nameVal) {
+            alert("Vui lòng nhập Biệt danh / Tên hiển thị của bạn!");
+            if (nameInput) nameInput.focus();
+            return;
+        }
 
         const profile = {
-            name: document.getElementById("guest-name")?.value.trim() || "",
-            age: document.getElementById("guest-age")?.value || "",
+            name: nameVal,
+            age: document.getElementById("guest-age")?.value.trim() || "",
             gender: document.getElementById("guest-gender")?.value || "khac",
             location: document.getElementById("guest-location")?.value || "",
-            avatar: document.getElementById("guest-avatar")?.value || ""
+            avatar: document.getElementById("guest-avatar")?.value.trim() || ""
         };
 
         if (currentUserId) {
@@ -820,8 +881,11 @@ function toggleChatInput(enable) {
                 const data = await response.json();
                 currentUserId = data.id.toString();
                 localStorage.setItem("chatUserId", currentUserId);
+                const userIdEl = document.getElementById('user-id');
+                if (userIdEl) userIdEl.innerText = currentUserId;
                 if (data.banned) {
                     alert("Tài khoản của bạn đã bị cấm chat!");
+                    return;
                 }
             }
         } catch (e) {
@@ -830,6 +894,22 @@ function toggleChatInput(enable) {
 
         localStorage.setItem("chatProfile", JSON.stringify(profile));
         updateUserProfileDisplay(profile);
+
+        const modal = document.getElementById("guest-modal");
+        if (modal) {
+            modal.classList.add("hidden");
+        }
+
+        const callback = profileSuccessCallback;
+        profileSuccessCallback = null;
+        if (typeof callback === 'function') {
+            callback();
+        }
+    }
+
+    // Giữ tương thích nếu có lời gọi cũ
+    async function saveGuestProfile() {
+        return saveGuestProfileAndProceed();
     }
 
     function loadProvinces() {
@@ -861,17 +941,20 @@ function toggleChatInput(enable) {
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        if (!currentUserId) {
-            saveGuestProfile();
-        } else {
-            const userIdEl = document.getElementById('user-id');
-            if (userIdEl) userIdEl.innerText = currentUserId;
+        const userIdEl = document.getElementById('user-id');
+        if (userIdEl && currentUserId) {
+            userIdEl.innerText = currentUserId;
         }
+
+        let hasProfile = false;
         try {
             const savedProfile = localStorage.getItem("chatProfile");
             if (savedProfile) {
                 const profile = JSON.parse(savedProfile);
-                if (profile.name) document.getElementById("guest-name").value = profile.name;
+                if (profile.name) {
+                    document.getElementById("guest-name").value = profile.name;
+                    hasProfile = true;
+                }
                 if (profile.age) document.getElementById("guest-age").value = profile.age;
                 if (profile.gender) document.getElementById("guest-gender").value = profile.gender;
                 if (profile.avatar) {
@@ -881,9 +964,15 @@ function toggleChatInput(enable) {
                     if (previewEl) previewEl.src = profile.avatar;
                 }
                 updateUserProfileDisplay(profile);
-                saveGuestProfile();
             }
         } catch (e) {
+        }
+
+        // Nếu là người dùng mới vào web lần đầu tiên (chưa có profile), hiển thị form nhập thông tin ngay
+        if (!hasProfile) {
+            setTimeout(() => {
+                openProfileModal(true);
+            }, 300);
         }
 
         const guestAvatarInput = document.getElementById("guest-avatar");
