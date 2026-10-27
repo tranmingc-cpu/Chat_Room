@@ -84,13 +84,11 @@ function connectWebSocket() {
         isReconnecting = false;
         clearTimeout(reconnectTimer);
 
-        // Gửi định danh clientId cố định
         socket.send(JSON.stringify({
             action: "INIT",
             clientId: clientUuid
         }));
 
-        // Khôi phục lại các room đang có trên server
         const activeRoomIds = Object.keys(rooms);
         if (activeRoomIds.length > 0) {
             socket.send(JSON.stringify({
@@ -99,7 +97,6 @@ function connectWebSocket() {
             }));
         }
 
-        // Ẩn thanh status khi kết nối thành công/bình thường
         const statusBox = document.getElementById("status");
         if (statusBox) {
             statusBox.style.display = "none";
@@ -177,7 +174,11 @@ function handleServerEvent(data) {
             break;
 
         case 'CHAT':
-            onRoomMessageReceived(data.roomId, data.message, data.msgType || "text", "partner");
+            onRoomMessageReceived(data.roomId, data.message, data.msgType || "text", "partner", data.msgId);
+            break;
+
+        case 'RECALL_MSG':
+            onRoomMessageRecalled(data.roomId, data.msgId);
             break;
 
         case 'PARTNER_LEFT':
@@ -206,13 +207,11 @@ async function findMatch() {
     // Nếu người dùng chưa có profile hoặc chưa nhập biệt danh, bắt buộc mở form thông tin trước
     if (!hasCompletedProfile()) {
         openProfileModal(true, () => {
-            // Callback sau khi lưu form xong sẽ tự động tiếp tục tìm phòng
             findMatch();
         });
         return;
     }
 
-    // Nếu đang tìm kiếm và người dùng bấm lại nút "Tìm thêm bạn", hủy tìm kiếm
     if (isSearching) {
         cancelSearch();
         return;
@@ -243,8 +242,6 @@ async function findMatch() {
 
     isSearching = true;
 
-    // Nếu chưa có phòng nào đang mở thì hiện modal tìm kiếm toàn màn hình,
-    // còn nếu đã có ít nhất 1 phòng thì KHÔNG che màn hình, để người dùng vẫn chat bình thường!
     if (Object.keys(rooms).length === 0) {
         showLoadingOverlay(true);
     } else {
@@ -483,21 +480,25 @@ function renderChatBoxForActiveRoom() {
     const msgs = rooms[activeRoomId].messages || [];
     msgs.forEach(m => {
         const isPartnerMsg = (m.sender === "partner");
-        if (m.kind === "text" || m.kind === "system" || m.kind === "match-banner") {
+        if (m.recalled) {
+            appendRecalledMessage(m.sender, m.id);
+        } else if (m.kind === "text" || m.kind === "system" || m.kind === "match-banner") {
             appendMessage(m.text, m.kind === "match-banner" ? "match-banner" : (m.sender || m.kind), isPartnerMsg && isFemalePartner);
         } else if (m.kind === "media") {
-            appendMediaMessage(m.url, m.mediaType, m.sender, isPartnerMsg && isFemalePartner);
+            appendMediaMessage(m.url, m.mediaType, m.sender, isPartnerMsg && isFemalePartner, m.id);
         }
     });
 }
 
-function onRoomMessageReceived(roomId, message, msgType, sender) {
+function onRoomMessageReceived(roomId, message, msgType, sender, msgId) {
     if (!rooms[roomId]) return;
 
+    const id = msgId || ('m_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6));
+
     if (msgType === "text") {
-        rooms[roomId].messages.push({ kind: "text", text: message, sender: sender });
+        rooms[roomId].messages.push({ id: id, kind: "text", text: message, sender: sender });
     } else {
-        rooms[roomId].messages.push({ kind: "media", url: message, mediaType: msgType, sender: sender });
+        rooms[roomId].messages.push({ id: id, kind: "media", url: message, mediaType: msgType, sender: sender });
     }
 
     if (roomId === activeRoomId) {
@@ -507,12 +508,69 @@ function onRoomMessageReceived(roomId, message, msgType, sender) {
         if (msgType === "text") {
             appendMessage(message, sender, isFemalePartner);
         } else {
-            appendMediaMessage(message, msgType, sender, isFemalePartner);
+            appendMediaMessage(message, msgType, sender, isFemalePartner, id);
         }
     } else {
         rooms[roomId].unreadCount = (rooms[roomId].unreadCount || 0) + 1;
         renderRoomTabs();
     }
+    saveRoomsToStorage();
+}
+
+function onRoomMessageRecalled(roomId, msgId) {
+    if (!rooms[roomId] || !msgId) return;
+
+    const roomMsgs = rooms[roomId].messages || [];
+    const targetMsg = roomMsgs.find(m => m.id === msgId);
+    if (targetMsg) {
+        targetMsg.recalled = true;
+    }
+
+    if (roomId === activeRoomId) {
+        const el = document.getElementById(`msg-${msgId}`);
+        if (el) {
+            const sender = targetMsg ? targetMsg.sender : "partner";
+            el.className = `message ${sender} message-recalled`;
+            el.innerHTML = `
+                <div class="recalled-message-badge">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                    <span>Tin nhắn đã được thu hồi</span>
+                </div>
+            `;
+        }
+    }
+    saveRoomsToStorage();
+}
+
+function recallMediaMessage(msgId) {
+    if (!activeRoomId || !rooms[activeRoomId] || !msgId) return;
+
+    const roomMsgs = rooms[activeRoomId].messages || [];
+    const targetMsg = roomMsgs.find(m => m.id === msgId);
+    if (!targetMsg || targetMsg.sender !== "me") return;
+
+    targetMsg.recalled = true;
+
+    // Gửi tín hiệu thu hồi sang server để báo cho đối phương
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+            action: "RECALL_MSG",
+            roomId: activeRoomId,
+            msgId: msgId
+        }));
+    }
+
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+        el.className = "message me message-recalled";
+        el.innerHTML = `
+            <div class="recalled-message-badge">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                <span>Bạn đã thu hồi một hình ảnh</span>
+            </div>
+        `;
+    }
+
     saveRoomsToStorage();
 }
 
@@ -597,7 +655,6 @@ async function uploadAndSendFile(event) {
     const currentActive = activeRoomId;
     const formData = new FormData();
     formData.append("file", file);
-    updateStatus("Đang tải file lên...", "#ffc107");
 
     try {
         const response = await fetch('/api/upload', {
@@ -607,14 +664,17 @@ async function uploadAndSendFile(event) {
 
         if (response.ok) {
             const data = await response.json();
+            const msgId = 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
             socket.send(JSON.stringify({
                 action: "SEND_MSG",
                 roomId: currentActive,
                 message: data.url,
-                msgType: data.type
+                msgType: data.type,
+                msgId: msgId
             }));
             if (rooms[currentActive]) {
                 rooms[currentActive].messages.push({
+                    id: msgId,
                     kind: "media",
                     url: data.url,
                     mediaType: data.type,
@@ -622,7 +682,7 @@ async function uploadAndSendFile(event) {
                 });
             }
             if (activeRoomId === currentActive) {
-                appendMediaMessage(data.url, data.type, "me");
+                appendMediaMessage(data.url, data.type, "me", false, msgId);
             }
             saveRoomsToStorage();
         }
@@ -702,16 +762,86 @@ function toggleChatInput(enable) {
         }
     }
 
-    function appendMediaMessage(url, type, sender, isFemalePartner) {
+    function appendRecalledMessage(sender, msgId) {
         const chatBox = document.getElementById("chat-box");
         const msgDiv = document.createElement("div");
-        msgDiv.className = `message ${sender}${isFemalePartner ? ' female' : ''}`;
+        if (msgId) msgDiv.id = `msg-${msgId}`;
+        msgDiv.className = `message ${sender} message-recalled`;
+        const text = (sender === "me") ? "Bạn đã thu hồi một hình ảnh" : "Tin nhắn đã được thu hồi";
+        msgDiv.innerHTML = `
+            <div class="recalled-message-badge">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                <span>${text}</span>
+            </div>
+        `;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 
+    function toggleMediaMenu(event, msgId) {
+        event.stopPropagation();
+        const existing = document.getElementById(`dropdown-${msgId}`);
+        // Đóng tất cả dropdown đang mở
+        document.querySelectorAll('.media-actions-dropdown').forEach(d => d.remove());
+        document.querySelectorAll('.media-actions-trigger').forEach(b => b.classList.remove('active'));
+
+        if (existing) return;
+
+        const triggerBtn = event.currentTarget;
+        triggerBtn.classList.add('active');
+
+        const dropdown = document.createElement('div');
+        dropdown.id = `dropdown-${msgId}`;
+        dropdown.className = 'media-actions-dropdown pos-left';
+        dropdown.innerHTML = `
+            <button class="btn-media-action" onclick="recallMediaMessage('${msgId}')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                <span>Thu hồi</span>
+            </button>
+        `;
+
+        triggerBtn.parentElement.appendChild(dropdown);
+
+        // Click ra ngoài để đóng menu
+        const closeDropdown = function(e) {
+            if (!dropdown.contains(e.target) && e.target !== triggerBtn) {
+                dropdown.remove();
+                triggerBtn.classList.remove('active');
+                document.removeEventListener('click', closeDropdown);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeDropdown), 50);
+    }
+
+    function appendMediaMessage(url, type, sender, isFemalePartner, msgId) {
+        const chatBox = document.getElementById("chat-box");
+        const msgDiv = document.createElement("div");
+        if (msgId) msgDiv.id = `msg-${msgId}`;
+        msgDiv.className = `message ${sender}${isFemalePartner ? ' female' : ''} message-media-container`;
+
+        const isMe = (sender === "me");
+        let mediaHtml = '';
         if (type === 'image') {
-            msgDiv.innerHTML = `<img src="${url}" alt="Hình ảnh" style="max-width:200px; border-radius:8px; cursor:pointer;" onclick="openImageModal('${url}')" />`;
+            mediaHtml = `<img src="${url}" alt="Hình ảnh" onclick="openImageModal('${url}')" />`;
         } else if (type === 'video') {
-            msgDiv.innerHTML = `<video src="${url}" controls style="max-width:250px; border-radius:8px;"></video>`;
+            mediaHtml = `<video src="${url}" controls></video>`;
         }
+
+        // Nếu là người gửi (sender === "me"), thêm nút 3 chấm để hiển thị menu Thu hồi
+        const actionBtnHtml = (isMe && msgId) ? `
+            <button class="media-actions-trigger" onclick="toggleMediaMenu(event, '${msgId}')" title="Tùy chọn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+            </button>
+        ` : '';
+
+        // Sắp xếp: Nếu là tin nhắn của mình thì nút 3 chấm nằm bên trái ảnh, của người khác nằm bên phải
+        msgDiv.innerHTML = `
+            <div class="media-bubble-wrap">
+                ${isMe ? actionBtnHtml : ''}
+                ${mediaHtml}
+                ${!isMe ? actionBtnHtml : ''}
+            </div>
+        `;
 
         chatBox.appendChild(msgDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -968,7 +1098,6 @@ function toggleChatInput(enable) {
         } catch (e) {
         }
 
-        // Nếu là người dùng mới vào web lần đầu tiên (chưa có profile), hiển thị form nhập thông tin ngay
         if (!hasProfile) {
             setTimeout(() => {
                 openProfileModal(true);
@@ -985,7 +1114,6 @@ function toggleChatInput(enable) {
             });
         }
 
-        // Khôi phục lại các phòng và tin nhắn đã lưu trước khi F5
         loadSavedRooms();
         if (Object.keys(rooms).length > 0) {
             renderRoomTabs();

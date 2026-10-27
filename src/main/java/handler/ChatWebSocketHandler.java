@@ -97,11 +97,26 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             String partnerId = getPartnerInRoom(roomId, clientId);
             if (partnerId != null && clientSessions.containsKey(partnerId)) {
                 WebSocketSession partnerSession = clientSessions.get(partnerId);
+                Map<String, Object> response = new HashMap<>();
+                response.put("type", "CHAT");
+                response.put("roomId", roomId);
+                response.put("message", data.get("message"));
+                response.put("msgType", data.getOrDefault("msgType", "text"));
+                if (data.containsKey("msgId")) {
+                    response.put("msgId", data.get("msgId"));
+                }
+                sendMessage(partnerSession, response);
+            }
+        } else if ("RECALL_MSG".equals(action)) {
+            String roomId = (String) data.get("roomId");
+            String msgId = (String) data.get("msgId");
+            String partnerId = getPartnerInRoom(roomId, clientId);
+            if (partnerId != null && clientSessions.containsKey(partnerId)) {
+                WebSocketSession partnerSession = clientSessions.get(partnerId);
                 Map<String, Object> response = Map.of(
-                        "type", "CHAT",
+                        "type", "RECALL_MSG",
                         "roomId", roomId,
-                        "message", (String) data.get("message"),
-                        "msgType", (String) data.getOrDefault("msgType", "text")
+                        "msgId", msgId != null ? msgId : ""
                 );
                 sendMessage(partnerSession, response);
             }
