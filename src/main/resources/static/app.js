@@ -1127,6 +1127,17 @@ function toggleChatInput(enable) {
 
         loadProvinces();
         connectWebSocket();
+
+        // Tự động cuộn xuống cuối khi bàn phím ảo điện thoại mở ra
+        const msgInput = document.getElementById("msg-input");
+        if (msgInput) {
+            msgInput.addEventListener("focus", () => {
+                setTimeout(() => {
+                    const chatBox = document.getElementById("chat-box");
+                    if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+                }, 300);
+            });
+        }
     });
 
     function toggleSidebar() {
