@@ -902,8 +902,8 @@ function toggleChatInput(enable) {
     function clearChat() {
         const chatBox = document.getElementById("chat-box");
         if (chatBox) {
-            const messages = chatBox.querySelectorAll('.message');
-            messages.forEach(msg => msg.remove());
+            const elements = chatBox.querySelectorAll('.message, .message-match-banner, .message-recalled');
+            elements.forEach(el => el.remove());
         }
     }
     function handleKeyPress(e) {

@@ -608,36 +608,60 @@ body {
 }
 
 .input-group button#btn-mic:hover:not(:disabled) {
-    background-color: #fee2e2;
-    color: #ef4444;
+    background-color: #e0edfd;
+    color: #1d4ed8;
 }
 
 .input-group button#btn-mic.recording {
-    background-color: #ef4444;
+    background-color: #3b82f6;
     color: #ffffff;
     animation: micPulse 1.2s infinite;
 }
 
+body.theme-female .input-group button#btn-mic:hover:not(:disabled) {
+    background-color: #fce7f3;
+    color: #db2777;
+}
+
+body.theme-female .input-group button#btn-mic.recording {
+    background-color: #ec4899;
+    color: #ffffff;
+    animation: micPulseFemale 1.2s infinite;
+}
+
 @keyframes micPulse {
     0% {
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
     }
     70% {
-        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+        box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
     }
 }
 
+@keyframes micPulseFemale {
+    0% {
+        box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.6);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(236, 72, 153, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(236, 72, 153, 0);
+    }
+}
+
+/* Thanh ghi âm tone xanh dịu nhẹ, hài hòa */
 .recording-indicator {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 8px 16px;
-    background-color: #fff1f2;
-    border-top: 1px solid #fecdd3;
-    color: #e11d48;
+    background-color: #f0f7ff;
+    border-top: 1px solid #dbeafe;
+    color: #2563eb;
     font-size: 0.88rem;
     font-weight: 500;
 }
@@ -649,7 +673,7 @@ body {
 .recording-pulse {
     width: 10px;
     height: 10px;
-    background-color: #ef4444;
+    background-color: #3b82f6;
     border-radius: 50%;
     animation: pulseDot 1s infinite alternate;
 }
@@ -662,14 +686,14 @@ body {
 .recording-timer {
     font-variant-numeric: tabular-nums;
     font-weight: 700;
-    color: #be123c;
+    color: #1d4ed8;
 }
 
 .btn-cancel-recording {
     margin-left: auto;
     background: none;
     border: none;
-    color: #9f1239;
+    color: #3b82f6;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -680,6 +704,29 @@ body {
 }
 
 .btn-cancel-recording:hover {
+    background: #dbeafe;
+}
+
+/* Thanh ghi âm cho theme nữ (hồng dịu) */
+body.theme-female .recording-indicator {
+    background-color: #fff1f2;
+    border-top-color: #fecdd3;
+    color: #e11d48;
+}
+
+body.theme-female .recording-pulse {
+    background-color: #f43f5e;
+}
+
+body.theme-female .recording-timer {
+    color: #be123c;
+}
+
+body.theme-female .btn-cancel-recording {
+    color: #e11d48;
+}
+
+body.theme-female .btn-cancel-recording:hover {
     background: #fecdd3;
 }
 
@@ -1667,132 +1714,169 @@ body.theme-female .btn-add-tab:not(.searching):hover {
 @media (max-width: 640px) {
     /* Header Bar */
     .header-bar {
-        padding: 10px 12px;
-        min-height: 54px;
-        gap: 8px;
-    }
-
-    .brand-title {
-        padding: 4px 10px;
+        padding: 8px 10px;
+        min-height: 48px;
         gap: 6px;
     }
 
-    .brand-icon {
-        width: 28px;
-        height: 28px;
-        border-radius: 8px;
-    }
-
-    .brand-icon svg {
-        width: 17px;
-        height: 17px;
-    }
-
-    .header-bar h2 {
-        font-size: 1.02rem;
-    }
-
-    .btn-header {
-        padding: 8px 12px;
-        font-size: 0.85rem;
+    .brand-title {
+        padding: 3px 8px;
         gap: 5px;
     }
 
+    .brand-icon {
+        width: 25px;
+        height: 25px;
+        border-radius: 7px;
+    }
+
+    .brand-icon svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    .header-bar h2 {
+        font-size: 0.94rem;
+    }
+
+    .btn-header {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+        gap: 4px;
+    }
+
     .btn-header svg {
-        width: 17px;
-        height: 17px;
+        width: 15px;
+        height: 15px;
     }
 
     .btn-menu {
-        padding: 7px;
+        padding: 6px;
     }
 
     .btn-menu svg {
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
     }
 
     /* Partner info bar */
     #partner-card {
-        padding: 8px 12px;
-        gap: 10px;
+        padding: 6px 10px;
+        gap: 8px;
     }
 
     #partner-avatar {
-        width: 38px;
-        height: 38px;
+        width: 34px;
+        height: 34px;
     }
 
     #partner-name {
-        font-size: 0.88rem;
+        font-size: 0.84rem;
     }
 
     #partner-card p {
-        font-size: 0.74rem;
+        font-size: 0.72rem;
     }
 
     .room-badge-indicator {
-        font-size: 0.72rem;
-        padding: 2px 6px;
+        font-size: 0.7rem;
+        padding: 2px 5px;
     }
 
     /* Room tabs bar */
     .room-tabs-bar {
-        padding: 5px 8px;
-        gap: 6px;
+        padding: 4px 6px;
+        gap: 5px;
     }
 
     .room-tab {
-        padding: 4px 8px;
-        font-size: 0.78rem;
+        padding: 3px 7px;
+        font-size: 0.75rem;
+    }
+
+    .room-tab-avatar {
+        width: 18px;
+        height: 18px;
     }
 
     .room-tab-title {
-        max-width: 70px;
+        max-width: 65px;
     }
 
     .btn-add-tab {
-        padding: 5px 10px;
-        font-size: 0.8rem;
+        padding: 4px 8px;
+        font-size: 0.76rem;
     }
 
     /* Chat Messages Box */
     .chat-box {
-        padding: 10px 12px;
-        gap: 8px;
+        padding: 8px 10px;
+        gap: 7px;
     }
 
     .message {
-        max-width: 86%;
-        padding: 8px 12px;
-        font-size: 0.9rem;
-        border-radius: 16px;
+        max-width: 88%;
+        padding: 7px 11px;
+        font-size: 0.86rem;
+        border-radius: 14px;
     }
 
     .message.system {
         max-width: 95%;
-        font-size: 0.78rem;
+        font-size: 0.75rem;
+        padding: 3px 8px;
     }
 
     .message-match-banner {
         width: 96%;
-        padding: 10px 12px;
-        margin: 8px auto;
+        padding: 8px 10px;
+        margin: 6px auto;
+        border-radius: 10px;
     }
 
     .match-banner-title {
-        font-size: 0.82rem;
+        font-size: 0.78rem;
     }
 
     .match-banner-text {
-        font-size: 0.78rem;
+        font-size: 0.74rem;
+    }
+
+    /* Audio Player & Khung ghi âm trên điện thoại: nhỏ gọn, chừa chỗ cho nút thu hồi */
+    .audio-bubble-wrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        max-width: 100%;
+    }
+
+    .audio-player-custom {
+        width: 185px;
+        max-width: 195px;
+        height: 36px;
+        border-radius: 18px;
+    }
+
+    /* Đảm bảo nút thu hồi (3 chấm) luôn hiển thị rõ trên điện thoại mà không cần hover chuột */
+    .media-actions-trigger {
+        opacity: 0.88 !important;
+        pointer-events: auto !important;
+        width: 26px;
+        height: 26px;
+        min-width: 26px;
+        margin: 0 4px;
+    }
+
+    .media-actions-trigger svg {
+        width: 13px;
+        height: 13px;
     }
 
     /* Message Input Box - support notch & safe-area-inset-bottom */
     .input-group {
-        padding: 8px 10px;
-        padding-bottom: max(8px, env(safe-area-inset-bottom));
-        gap: 8px;
+        padding: 6px 8px;
+        padding-bottom: max(6px, env(safe-area-inset-bottom));
+        gap: 5px;
     }
 
     /* Prevent automatic iOS zoom when focusing inputs by ensuring >= 16px font-size */
@@ -1803,55 +1887,72 @@ body.theme-female .btn-add-tab:not(.searching):hover {
     }
 
     .input-group input[type="text"] {
-        padding: 9px 14px;
+        padding: 7px 11px;
+        font-size: 0.88rem;
+        min-width: 0;
+        flex: 1 1 auto;
     }
 
     .input-group button {
-        width: 38px;
-        height: 38px;
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        flex-shrink: 0;
+    }
+
+    .input-group button#btn-send {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
     }
 
     .input-group button svg {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
+    }
+
+    .recording-indicator {
+        padding: 5px 10px;
+        font-size: 0.78rem;
+        gap: 6px;
     }
 
     /* Sidebar drawer on mobile */
     .sidebar {
-        width: 85%;
-        max-width: 320px;
+        width: 82%;
+        max-width: 300px;
     }
 
     .sidebar-header {
-        padding: 14px 16px;
+        padding: 12px 14px;
     }
 
     .sidebar-profile-card {
-        margin: 10px 12px 6px 12px;
-        padding: 12px 14px;
+        margin: 8px 10px 4px 10px;
+        padding: 10px 12px;
     }
 
     /* Modals on mobile */
     .modal-overlay {
-        padding: 12px;
+        padding: 10px;
         align-items: flex-end;
     }
 
     .modal-content {
         max-width: 100%;
-        border-radius: 18px 18px 12px 12px;
-        padding: 18px 16px;
+        border-radius: 16px 16px 10px 10px;
+        padding: 16px 14px;
         max-height: 90vh;
         overflow-y: auto;
     }
 
     .form-row-2 {
         display: flex;
-        gap: 8px;
+        gap: 6px;
     }
 
     .sleeping-cat-icon {
-        width: 80px;
-        height: 80px;
+        width: 72px;
+        height: 72px;
     }
 }
