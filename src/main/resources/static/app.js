@@ -586,10 +586,13 @@ function recallMediaMessage(msgId) {
     const el = document.getElementById(`msg-${msgId}`);
     if (el) {
         el.className = "message me message-recalled";
+        const recalledText = (targetMsg.mediaType === "VOICE" || targetMsg.mediaType === "audio")
+            ? "Bạn đã thu hồi một tin nhắn thoại"
+            : (targetMsg.mediaType === "video" ? "Bạn đã thu hồi một video" : "Bạn đã thu hồi một hình ảnh");
         el.innerHTML = `
             <div class="recalled-message-badge">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-                <span>Bạn đã thu hồi một hình ảnh</span>
+                <span>${recalledText}</span>
             </div>
         `;
     }
@@ -768,13 +771,19 @@ function toggleChatInput(enable) {
     const btnSend = document.getElementById("btn-send");
     const msgInput = document.getElementById("msg-input");
     const btnFile = document.getElementById("btn-file");
+    const btnMic = document.getElementById("btn-mic");
     const menuExit = document.getElementById("menu-exit-room");
 
     if (btnExit) btnExit.disabled = !enable;
     if (btnSend) btnSend.disabled = !enable;
     if (msgInput) msgInput.disabled = !enable;
     if (btnFile) btnFile.disabled = !enable;
+    if (btnMic) btnMic.disabled = !enable;
     if (menuExit) menuExit.style.display = enable ? "flex" : "none";
+
+    if (!enable && typeof cancelRecording === "function") {
+        cancelRecording();
+    }
 }
 
     function showModal(show) {
@@ -804,7 +813,6 @@ function toggleChatInput(enable) {
     function toggleMediaMenu(event, msgId) {
         event.stopPropagation();
         const existing = document.getElementById(`dropdown-${msgId}`);
-        // Đóng tất cả dropdown đang mở
         document.querySelectorAll('.media-actions-dropdown').forEach(d => d.remove());
         document.querySelectorAll('.media-actions-trigger').forEach(b => b.classList.remove('active'));
 
@@ -825,7 +833,6 @@ function toggleChatInput(enable) {
 
         triggerBtn.parentElement.appendChild(dropdown);
 
-        // Click ra ngoài để đóng menu
         const closeDropdown = function(e) {
             if (!dropdown.contains(e.target) && e.target !== triggerBtn) {
                 dropdown.remove();
@@ -847,17 +854,19 @@ function toggleChatInput(enable) {
         if (type === 'image') {
             mediaHtml = `<img src="${url}" alt="Hình ảnh" onclick="openImageModal('${url}')" />`;
         } else if (type === 'video') {
-            mediaHtml = `<video src="${url}" controls></video>`;
+            mediaHtml = `<video src="${url}" controls playsinline></video>`;
+        } else if (type === 'VOICE' || type === 'audio') {
+            mediaHtml = `
+                <div class="audio-bubble-wrap">
+                    <audio class="audio-player-custom" src="${url}" controls preload="metadata"></audio>
+                </div>
+            `;
         }
-
-        // Nếu là người gửi (sender === "me"), thêm nút 3 chấm để hiển thị menu Thu hồi
         const actionBtnHtml = (isMe && msgId) ? `
             <button class="media-actions-trigger" onclick="toggleMediaMenu(event, '${msgId}')" title="Tùy chọn">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
             </button>
         ` : '';
-
-        // Sắp xếp: Nếu là tin nhắn của mình thì nút 3 chấm nằm bên trái ảnh, của người khác nằm bên phải
         msgDiv.innerHTML = `
             <div class="media-bubble-wrap">
                 ${isMe ? actionBtnHtml : ''}
@@ -970,7 +979,6 @@ function toggleChatInput(enable) {
         const closeBtn = document.getElementById("btn-close-guest-modal");
 
         if (isRequired) {
-            if (titleEl) titleEl.innerText = "👋 Bạn là người mới!";
             if (subtitleEl) subtitleEl.innerText = "Vui lòng nhập tên/biệt danh để bắt đầu tìm phòng chat:";
             if (submitBtn) submitBtn.innerText = "Lưu & Tiếp tục tìm bạn";
             if (closeBtn) {
@@ -979,7 +987,7 @@ function toggleChatInput(enable) {
             }
         } else {
             if (titleEl) titleEl.innerText = "Hồ sơ của bạn";
-            if (subtitleEl) subtitleEl.innerText = "Cập nhật thông tin hiển thị với mọi người";
+            if (subtitleEl) subtitleEl.innerText = "Cập nhật thông tin";
             if (submitBtn) submitBtn.innerText = "Lưu thay đổi";
             if (closeBtn) {
                 closeBtn.style.display = "flex";
@@ -1004,8 +1012,6 @@ function toggleChatInput(enable) {
     async function saveGuestProfileAndProceed() {
         const nameInput = document.getElementById("guest-name");
         let nameVal = nameInput ? nameInput.value.trim() : "";
-
-        // Nếu người dùng không nhập tên, tự động đặt tên theo ID người dùng
         if (!nameVal) {
             nameVal = currentUserId ? `Người lạ #${currentUserId}` : "Người lạ";
         }
@@ -1089,7 +1095,6 @@ function toggleChatInput(enable) {
                 console.error("Lỗi khi load danh sách Tỉnh/Thành:", error);
             });
     }
-
     document.addEventListener("DOMContentLoaded", function () {
         const userIdEl = document.getElementById('user-id');
         if (userIdEl && currentUserId) {
@@ -1164,7 +1169,220 @@ function toggleChatInput(enable) {
         if (sidebar) sidebar.classList.toggle('active');
         if (overlay) overlay.classList.toggle('active');
     }
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingTimerInterval = null;
+let recordingSeconds = 0;
+let isRecordingCancelled = false;
+const MAX_RECORDING_SECONDS = 60; // Giới hạn tối đa 60 giây
 
+function toggleVoiceRecording() {
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+async function startRecording() {
+    if (!activeRoomId || !rooms[activeRoomId]) {
+        alert("Bạn chưa vào phòng chat nào!");
+        return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Trình duyệt của bạn không hỗ trợ ghi âm qua Micro!");
+        return;
+    }
+
+    audioChunks = [];
+    isRecordingCancelled = false;
+    recordingSeconds = 0;
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        // Hỗ trợ mimeType tốt nhất tùy trình duyệt
+        let options = {};
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            options = { mimeType: 'audio/webm;codecs=opus' };
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+            options = { mimeType: 'audio/webm' };
+        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+            options = { mimeType: 'audio/ogg;codecs=opus' };
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            options = { mimeType: 'audio/mp4' };
+        }
+
+        mediaRecorder = new MediaRecorder(stream, options);
+
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        };
+
+        mediaRecorder.onstop = async () => {
+            clearInterval(recordingTimerInterval);
+            resetRecordingUI();
+
+            // Tắt tất cả các audio track để giải phóng Micro
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            if (isRecordingCancelled) {
+                console.log("Đã hủy bản ghi âm.");
+                audioChunks = [];
+                return;
+            }
+
+            if (audioChunks.length === 0) {
+                console.warn("Không có dữ liệu âm thanh thu được.");
+                return;
+            }
+
+            const mimeType = mediaRecorder.mimeType || 'audio/webm';
+            const audioBlob = new Blob(audioChunks, { type: mimeType });
+
+            try {
+                const base64Audio = await blobToBase64(audioBlob);
+                sendVoiceMessageViaWebSocket(base64Audio);
+            } catch (e) {
+                console.error("Lỗi khi chuyển đổi file ghi âm:", e);
+                alert("Không thể chuyển đổi âm thanh đã ghi!");
+            }
+            audioChunks = [];
+        };
+
+        mediaRecorder.start(250); // Thu thập chunks mỗi 250ms
+        showRecordingUI(true);
+
+        // Bắt đầu đếm thời gian
+        recordingTimerInterval = setInterval(() => {
+            recordingSeconds++;
+            updateRecordingTimerDisplay(recordingSeconds);
+
+            if (recordingSeconds >= MAX_RECORDING_SECONDS) {
+                stopRecording();
+            }
+        }, 1000);
+
+    } catch (err) {
+        console.error("Không thể truy cập Micro:", err);
+        resetRecordingUI();
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+            alert("Bạn cần cấp quyền truy cập Micro trên trình duyệt để sử dụng tính năng ghi âm!");
+        } else {
+            alert("Lỗi khi mở Micro: " + (err.message || err.name));
+        }
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+    }
+}
+
+function cancelRecording() {
+    isRecordingCancelled = true;
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+    } else {
+        clearInterval(recordingTimerInterval);
+        resetRecordingUI();
+    }
+}
+
+function showRecordingUI(isRecording) {
+    const btnMic = document.getElementById("btn-mic");
+    const indicator = document.getElementById("recording-indicator");
+    const timer = document.getElementById("recording-timer");
+    const msgInput = document.getElementById("msg-input");
+
+    if (btnMic) {
+        if (isRecording) {
+            btnMic.classList.add("recording");
+            btnMic.title = "Bấm để dừng và gửi";
+        } else {
+            btnMic.classList.remove("recording");
+            btnMic.title = "Ghi âm thoại";
+        }
+    }
+    if (indicator) {
+        if (isRecording) {
+            indicator.classList.remove("hidden");
+            if (timer) timer.innerText = "00:00";
+        } else {
+            indicator.classList.add("hidden");
+        }
+    }
+    if (msgInput) {
+        msgInput.placeholder = isRecording ? "Đang thu âm giọng nói..." : "Nhập tin nhắn...";
+    }
+}
+
+function resetRecordingUI() {
+    showRecordingUI(false);
+}
+
+function updateRecordingTimerDisplay(totalSeconds) {
+    const timer = document.getElementById("recording-timer");
+    if (!timer) return;
+    const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const secs = (totalSeconds % 60).toString().padStart(2, '0');
+    timer.innerText = `${mins}:${secs}`;
+}
+
+function sendVoiceMessageViaWebSocket(base64Audio) {
+    if (!activeRoomId || !rooms[activeRoomId]) {
+        console.warn("Không có phòng hoạt động để gửi âm thanh!");
+        return;
+    }
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        alert("Mất kết nối máy chủ, không thể gửi tin nhắn thoại!");
+        return;
+    }
+
+    const currentActive = activeRoomId;
+    const msgId = 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+    // Gửi gói tin JSON qua WebSocket
+    socket.send(JSON.stringify({
+        action: "SEND_MSG",
+        roomId: currentActive,
+        message: base64Audio,
+        msgType: "VOICE",
+        msgId: msgId
+    }));
+
+    // Lưu vào tin nhắn phòng hiện tại của chính mình
+    if (rooms[currentActive]) {
+        rooms[currentActive].messages.push({
+            id: msgId,
+            kind: "media",
+            url: base64Audio,
+            mediaType: "VOICE",
+            sender: "me"
+        });
+    }
+
+    // Hiển thị ngay trên UI của mình
+    if (activeRoomId === currentActive) {
+        appendMediaMessage(base64Audio, "VOICE", "me", false, msgId);
+    }
+    saveRoomsToStorage();
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
     function openImageModal(url) {
         let modal = document.getElementById('image-preview-modal');
         if (!modal) {

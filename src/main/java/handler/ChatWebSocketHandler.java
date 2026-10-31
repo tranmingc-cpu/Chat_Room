@@ -37,6 +37,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        // Tăng giới hạn bộ đệm tin nhắn cho từng WebSocketSession lên 10MB
+        session.setTextMessageSizeLimit(10 * 1024 * 1024);
+        session.setBinaryMessageSizeLimit(10 * 1024 * 1024);
         System.out.println("WebSocket kết nối tạm thời: " + session.getId());
     }
 

@@ -15,14 +15,21 @@ public class Room {
     public static class ChatMessage {
         private String senderId;
         private String content;
+        private String msgType; // "text", "image", "video", "VOICE"
 
         public ChatMessage(String senderId, String content) {
+            this(senderId, content, "text");
+        }
+
+        public ChatMessage(String senderId, String content, String msgType) {
             this.senderId = senderId;
             this.content = content;
+            this.msgType = msgType != null ? msgType : "text";
         }
 
         public String getSenderId() { return senderId; }
         public String getContent() { return content; }
+        public String getMsgType() { return msgType; }
     }
 
     private String roomId;
